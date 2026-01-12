@@ -1,0 +1,51 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Base Styles */
+body {
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+.view-section {
+    width: 100%;
+}
+
+/* Scrollbar styling for subject list */
+#addSubjectsContainer::-webkit-scrollbar,
+#editSubjectsContainer::-webkit-scrollbar {
+    width: 6px;
+}
+
+#addSubjectsContainer::-webkit-scrollbar-thumb,
+#editSubjectsContainer::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 4px;
+}
+
+/* Print Styles */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+
+    #studentMarksheet,
+    #studentMarksheet * {
+        visibility: visible;
+    }
+
+    #studentMarksheet {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        box-shadow: none;
+        border: none;
+        background: white !important;
+        color: black !important;
+    }
+
+    .print\:hidden {
+        display: none !important;
+    }
+}
