@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -16,8 +17,8 @@ app.use(express.static(path.join(__dirname, '..')));
 
 // Admin Credentials
 const ADMIN_CREDENTIALS = {
-    username: process.env.ADMIN_USERNAME || 'Nandish',
-    password: process.env.ADMIN_PASSWORD || 'Nandish_16_'
+    username: (process.env.ADMIN_USERNAME || 'Nandish').trim(),
+    password: (process.env.ADMIN_PASSWORD || 'Nandish_16_').trim()
 };
 
 // --- API Endpoints ---
@@ -25,9 +26,17 @@ const ADMIN_CREDENTIALS = {
 // 1. Admin Login
 app.post('/api/admin/login', (req, res) => {
     const { username, password } = req.body;
-    if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
+
+    const inputUser = (username || '').trim();
+    const inputPass = (password || '').trim();
+
+    console.log(`Admin login attempt: ${inputUser}`);
+
+    if (inputUser.toLowerCase() === ADMIN_CREDENTIALS.username.toLowerCase() && inputPass === ADMIN_CREDENTIALS.password) {
+        console.log('Admin login successful');
         res.json({ success: true, message: 'Login successful' });
     } else {
+        console.warn('Admin login failed');
         res.status(401).json({ success: false, message: 'Entered username or password is incorrect' });
     }
 });
