@@ -480,24 +480,22 @@ const app = {
             const onclickAttr = btn.getAttribute('onclick');
             if (onclickAttr && onclickAttr.includes('viewMarksheet')) {
                 const semesterId = onclickAttr.match(/'([^']+)'/)[1];
+                const label = btn.querySelector('.sem-label');
                 if (app.availableSemesters.includes(semesterId)) {
                     btn.classList.add('border-cyan-400');
                     btn.classList.remove('border-white/10');
-                    // Target ONLY the second span (the text label)
-                    const spans = btn.querySelectorAll('span');
-                    if (spans.length >= 2) {
-                        spans[1].textContent = 'Data Available';
-                        spans[1].classList.remove('text-slate-400');
-                        spans[1].classList.add('text-cyan-400');
+                    if (label) {
+                        label.textContent = 'Data Available';
+                        label.classList.remove('text-slate-400');
+                        label.classList.add('text-cyan-400');
                     }
                 } else {
                     btn.classList.remove('border-cyan-400');
                     btn.classList.add('border-white/10');
-                    const spans = btn.querySelectorAll('span');
-                    if (spans.length >= 2) {
-                        spans[1].textContent = 'Data Semester';
-                        spans[1].classList.remove('text-cyan-400');
-                        spans[1].classList.add('text-slate-400');
+                    if (label) {
+                        label.textContent = 'Data Semester';
+                        label.classList.remove('text-cyan-400');
+                        label.classList.add('text-slate-400');
                     }
                 }
             }
