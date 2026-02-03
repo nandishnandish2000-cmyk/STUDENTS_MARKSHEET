@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loading Animation Demo</title>
+    <script type="module" src="https://unpkg.com/@splinetool/viewer@1.12.37/build/spline-viewer.js"></script>
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0f172a;
+            font-family: 'Inter', sans-serif;
+        }
+
+        #initial-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 1s ease-out, visibility 1s;
+        }
+
+        #initial-loader.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        #main-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            opacity: 0;
+            transition: opacity 2s ease-in;
+        }
+
+        #main-content.visible {
+            opacity: 1;
+        }
+
+        .robot-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        .ui-element {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(to right, #22d3ee, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- CLEAN ROBOT ANIMATION (NO UI) -->
+    <div id="initial-loader" class="visible">
+        <spline-viewer id="loader-spline"
+            url="https://prod.spline.design/7C6odspyctbqPdNp/scene.splinecode"></spline-viewer>
+    </div>
+
+    <script>
+        window.addEventListener('load', () => {
+            const loader = document.getElementById('initial-loader');
+            const main = document.getElementById('main-content');
+            const loaderSpline = document.getElementById('loader-spline');
+
+            // Function to reveal main content
+            const revealContent = () => {
+                loader.classList.add('hidden');
+                main.classList.add('visible');
+
+                // Ensure it doesn't show again (for this demo session)
+                localStorage.setItem('hasSeenInitialLoader', 'true');
+            };
+
+            // Aggressive Spline Emblem Removal
+            const hideSplineWatermark = () => {
+                // 1. Target Shadow DOM
+                document.querySelectorAll('spline-viewer').forEach(viewer => {
+                    if (viewer.shadowRoot) {
+                        if (!viewer.shadowRoot.querySelector('#hide-logo-style')) {
+                            const style = document.createElement('style');
+                            style.id = 'hide-logo-style';
+                            style.textContent = `
+                                #logo, .spline-watermark, a[href*="spline.design"], #spline-watermark, 
+                                [style*="bottom: 16px; right: 16px;"], [style*="bottom: 10px; right: 10px;"],
+                                a[target="_blank"], .spline-watermark-container { 
+                                    display: none !important; 
+                                    visibility: hidden !important; 
+                                    opacity: 0 !important; 
+                                    pointer-events: none !important; 
+                                }
+                            `;
+                            viewer.shadowRoot.appendChild(style);
+                        }
+                        const logo = viewer.shadowRoot.querySelector('#logo') ||
+                            viewer.shadowRoot.querySelector('.spline-watermark') ||
+                            viewer.shadowRoot.querySelector('a[href*="spline.design"]') ||
+                            viewer.shadowRoot.querySelector('a[target="_blank"]');
+                        if (logo) logo.remove();
+
+                        // Recursive check for text content
+                        viewer.shadowRoot.querySelectorAll('a, div, span').forEach(el => {
+                            if (el.textContent && el.textContent.includes('Built with Spline')) {
+                                el.style.display = 'none';
+                                el.remove();
+                            }
+                        });
+                    }
+                });
+                // 2. Target Light DOM (Safety Fallback)
+                document.querySelectorAll('a[href*="spline.design"]').forEach(el => el.remove());
+            };
+            setInterval(hideSplineWatermark, 10);
+
+            if (loaderSpline) {
+                loaderSpline.addEventListener('load-complete', () => {
+                    console.log('Loader Spline loaded');
+                    setTimeout(revealContent, 2000); // Small delay to let user see it
+                });
+
+                // Fallback timeout in case spline fails to load or takes too long
+                setTimeout(() => {
+                    if (!loader.classList.contains('hidden')) {
+                        console.log('Fallback timeout triggered');
+                        revealContent();
+                    }
+                }, 8000);
+            } else {
+                revealContent();
+            }
+        });
+    </script>
+</body>
+
+</html>

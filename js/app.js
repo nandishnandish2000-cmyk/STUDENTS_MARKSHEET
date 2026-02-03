@@ -529,6 +529,153 @@ const app = {
         } catch (err) {
             app.showToast('Error fetching marksheet', 'error');
         }
+    },
+
+    viewOverallConclusion: async () => {
+        try {
+            const res = await fetch(`${API_BASE}/student/overall/${app.currentStudentRegNo}`);
+            const data = await res.json();
+
+            if (data.success) {
+                app.navigateTo('overallConclusion');
+
+                let totalObtained = 0;
+                let totalMax = 0;
+                let coreObtained = 0;
+                let coreMax = 0;
+                let totalSubjects = 0;
+                let coreCount = 0;
+                let hasFail = false;
+
+                const timelineContainer = document.getElementById('semesterTimelineContainer');
+                timelineContainer.innerHTML = '';
+
+                // Sort history by semester naturally
+                data.history.sort((a, b) => a.semester.localeCompare(b.semester, undefined, { numeric: true }));
+
+                data.history.forEach(sem => {
+                    const semTitle = sem.semester.replace('_', ' ').toUpperCase();
+                    const semWrapper = document.createElement('div');
+                    semWrapper.className = 'glass-card p-8 rounded-2xl border-white/5';
+
+                    let semHtml = `
+                        <div class="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
+                            <h4 class="text-xl font-bold text-cyan-400 font-[Orbitron]">${semTitle}</h4>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="text-left text-slate-500 uppercase text-[10px] tracking-widest">
+                                        <th class="pb-4">Subject</th>
+                                        <th class="pb-4">Type</th>
+                                        <th class="pb-4 text-center">Score</th>
+                                        <th class="pb-4 text-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-slate-300 divide-y divide-white/5">
+                    `;
+
+                    sem.subjects.forEach(sub => {
+                        totalSubjects++;
+                        const total = (sub.internal_marks || 0) + sub.mark;
+                        const max = (sub.overall_max_marks || 75) + 25;
+                        const isPass = total >= (max * 0.4);
+                        if (!isPass) hasFail = true;
+
+                        if (sub.paper_type === 'CORE') {
+                            coreCount++;
+                            coreObtained += total;
+                            coreMax += max;
+                        }
+                        totalObtained += total;
+                        totalMax += max;
+
+                        semHtml += `
+                            <tr>
+                                <td class="py-3 font-medium text-white">${sub.name}</td>
+                                <td class="py-3"><span class="px-2 py-0.5 rounded text-[9px] border ${sub.paper_type === 'CORE' ? 'border-indigo-500/30 text-indigo-400 bg-indigo-500/5' : 'border-slate-500/30 text-slate-400 bg-slate-500/5'} font-bold">${sub.paper_type}</span></td>
+                                <td class="py-3 text-center font-mono">${total} / ${max}</td>
+                                <td class="py-3 text-center"><span class="${isPass ? 'text-emerald-400' : 'text-rose-400'} font-black text-[10px] tracking-widest">${isPass ? 'PASS' : 'FAIL'}</span></td>
+                            </tr>
+                        `;
+                    });
+
+                    semHtml += `</tbody></table></div>`;
+                    semWrapper.innerHTML = semHtml;
+                    timelineContainer.appendChild(semWrapper);
+                });
+
+                // Update Stats
+                const corePercent = coreMax > 0 ? (coreObtained / coreMax) * 100 : 0;
+                document.getElementById('overallCorePercent').textContent = corePercent.toFixed(2) + '%';
+                document.getElementById('overallTotalSubjects').textContent = totalSubjects;
+                document.getElementById('overallCoreCount').textContent = coreCount;
+
+                const statusEl = document.getElementById('overallFinalStatus');
+                if (hasFail) {
+                    statusEl.textContent = 'NEEDS ATTENTION';
+                    statusEl.className = 'text-2xl font-bold text-rose-500 font-[Orbitron] mt-1 block';
+                } else {
+                    statusEl.textContent = 'QUALIFIED';
+                    statusEl.className = 'text-2xl font-bold text-emerald-400 font-[Orbitron] mt-1 block';
+                }
+
+                // Generate Career Insights
+                app.generateCareerInsights(data.history);
+
+            } else {
+                app.showToast(data.message || 'Records not found', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            app.showToast('Error syncing overall data', 'error');
+        }
+    },
+
+    generateCareerInsights: (history) => {
+        const insightsEl = document.getElementById('careerInsights');
+
+        // Flatten all subjects to find top performers
+        const allSubjects = [];
+        history.forEach(sem => sem.subjects.forEach(s => allSubjects.push(s)));
+
+        const coreSubjects = allSubjects.filter(s => s.paper_type === 'CORE');
+        if (coreSubjects.length === 0) {
+            insightsEl.textContent = "Continue your academic journey to unlock personalized career trajectories.";
+            return;
+        }
+
+        // Sort by percentage performance
+        coreSubjects.sort((a, b) => {
+            const percA = ((a.internal_marks || 0) + a.mark) / ((a.overall_max_marks || 75) + 25);
+            const percB = ((b.internal_marks || 0) + b.mark) / ((b.overall_max_marks || 75) + 25);
+            return percB - percA;
+        });
+
+        const top3 = coreSubjects.slice(0, 3).map(s => s.name);
+
+        let insightText = `Based on your exceptional performance in <span class="text-cyan-400 font-bold">${top3[0]}</span>`;
+        if (top3[1]) insightText += ` and <span class="text-cyan-400 font-bold">${top3[1]}</span>`;
+
+        insightText += `, you display a strong aptitude for `;
+
+        // Simple keyword based career matching
+        const lowName = top3[0].toLowerCase();
+        if (lowName.includes('data') || lowName.includes('database') || lowName.includes('sql')) {
+            insightText += "Data Engineering, Database Architecture, and Big Data Analytics. Consider certifications in Cloud Data platforms.";
+        } else if (lowName.includes('java') || lowName.includes('python') || lowName.includes('c++') || lowName.includes('programming')) {
+            insightText += "Software Development, Systems Architecting, and Backend Engineering. You have the logic to build complex scalable systems.";
+        } else if (lowName.includes('web') || lowName.includes('html') || lowName.includes('js') || lowName.includes('react')) {
+            insightText += "Full-Stack Development and UI/UX Architecture. Your ability to integrate front-end logic with user needs is a key asset.";
+        } else if (lowName.includes('network') || lowName.includes('security') || lowName.includes('cloud')) {
+            insightText += "Cybersecurity Analysis and Cloud Infrastructure Management. You are well-suited for high-stakes system protection.";
+        } else if (lowName.includes('ai') || lowName.includes('machine') || lowName.includes('intelligence')) {
+            insightText += "A.I. Research and Machine Learning Engineering. You possess the mathematical rigor for advanced cognitive computing.";
+        } else {
+            insightText += "Advanced Technical Leadership. Your diverse core strength indicates a potential for Tech Product Management or Solution Architecture.";
+        }
+
+        insightsEl.innerHTML = insightText;
     }
 };
 

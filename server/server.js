@@ -148,6 +148,34 @@ app.post('/api/student/login', async (req, res) => {
     }
 });
 
+// 8. Get Overall Data for all Semesters
+app.get('/api/student/overall/:regNo', async (req, res) => {
+    const { regNo } = req.params;
+    try {
+        const [students] = await db.query('SELECT * FROM students WHERE reg_no = ? ORDER BY semester ASC', [regNo]);
+        if (students.length > 0) {
+            const overallData = await Promise.all(students.map(async (student) => {
+                const [marks] = await db.query('SELECT subject_name as name, mark, paper_type, overall_max_marks, internal_marks FROM marks WHERE student_id = ?', [student.id]);
+                return {
+                    semester: student.semester,
+                    subjects: marks
+                };
+            }));
+            res.json({
+                success: true,
+                studentName: students[0].name,
+                regNo: students[0].reg_no,
+                history: overallData
+            });
+        } else {
+            res.status(404).json({ success: false, message: 'No records found for this student' });
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: 'Database error' });
+    }
+});
+
 // 7. Get Single Student Data (for Student Portal)
 app.get('/api/student/:semester/:regNo', async (req, res) => {
     const { semester, regNo } = req.params;
@@ -172,6 +200,7 @@ app.get('/api/student/:semester/:regNo', async (req, res) => {
         res.status(500).json({ success: false, message: 'Database error' });
     }
 });
+
 
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);

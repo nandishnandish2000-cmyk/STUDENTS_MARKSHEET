@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animation Demo - Kinetic Grid</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module" src="https://unpkg.com/@splinetool/viewer@1.12.37/build/spline-viewer.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Inter', sans-serif;
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        #robot-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        spline-viewer {
+            width: 100%;
+            height: 100%;
+            background: transparent !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="canvas-container"></div>
+
+    <div id="robot-layer">
+        <spline-viewer url="https://prod.spline.design/7C6odspyctbqPdNp/scene.splinecode"
+            background="transparent"></spline-viewer>
+    </div>
+
+    <!-- Three.js Setup -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // --- Setup Scene ---
+        const container = document.getElementById('canvas-container');
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        // Deep Black
+        renderer.setClearColor(0x000000, 1);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        const scene = new THREE.Scene();
+        // Minimal fog to fade distant dots
+        scene.fog = new THREE.Fog(0x000000, 20, 60);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 15, 20); // High angle View
+        camera.lookAt(0, 0, 0);
+
+        // --- INSTANCED GRID ---
+        const ROWS = 60;
+        const COLS = 60;
+        const SPACING = 1.2;
+        const COUNT = ROWS * COLS;
+
+        // Geometry: Small spheres or Boxes (Minimalist dots)
+        const geometry = new THREE.CylinderGeometry(0.1, 0.1, 0.5, 8);
+        geometry.rotateX(Math.PI / 2); // Point Z forward
+
+        const material = new THREE.MeshBasicMaterial({
+            color: 0x22d3ee, // Cyan
+        });
+
+        const mesh = new THREE.InstancedMesh(geometry, material, COUNT);
+        scene.add(mesh);
+
+        // Store original positions for calculation
+        const dummy = new THREE.Object3D();
+        const originalPositions = [];
+        let i = 0;
+
+        for (let x = 0; x < ROWS; x++) {
+            for (let z = 0; z < COLS; z++) {
+
+                // Center the grid
+                const posX = (x - ROWS / 2) * SPACING;
+                const posZ = (z - COLS / 2) * SPACING;
+
+                dummy.position.set(posX, 0, posZ);
+                dummy.updateMatrix();
+                mesh.setMatrixAt(i, dummy.matrix);
+
+                originalPositions.push({ x: posX, z: posZ });
+                i++;
+            }
+        }
+
+        // --- MOUSE TRACKING (RAYCASTER) ---
+        // We project a ray to the ground plane (y=0) to know where mouse is in 3D
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0); // Ground plane
+        const target = new THREE.Vector3();
+
+        document.addEventListener('mousemove', (event) => {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        });
+
+        // --- ANIMATION LOOP ---
+        const clock = new THREE.Clock();
+        const colorCyan = new THREE.Color(0x22d3ee);
+        const colorWhite = new THREE.Color(0xffffff);
+
+        const tick = () => {
+            const time = clock.getElapsedTime();
+
+            // 1. Raycast to find mouse position on grid
+            raycaster.setFromCamera(mouse, camera);
+            raycaster.ray.intersectPlane(plane, target);
+
+            // 2. Update Instances
+            for (let i = 0; i < COUNT; i++) {
+                const origin = originalPositions[i];
+
+                // Calculate distance from this dot to the mouse target
+                const dx = origin.x - target.x;
+                const dz = origin.z - target.z;
+                const dist = Math.sqrt(dx * dx + dz * dz);
+
+                // Wave Calculation
+                // A ripple that moves outward from the mouse position
+                // y = Height
+
+                let y = 0;
+                let scale = 1;
+
+                // Influence Radius (Interactive)
+                const radius = 15;
+
+                if (dist < radius) {
+                    // Create a "Hill" or "Wave" under the mouse
+                    // Using Cosine for smooth curve
+                    const angle = (dist / radius) * Math.PI * 2;
+                    y = Math.cos(angle) * 2 - 1; // -1 to 1 range approx interaction
+
+                    // Clamping and blending
+                    y = Math.max(0, Math.cos((dist / radius) * Math.PI * 0.5)); // 0 to 1 bump
+                    y *= 3.0; // Height magnitude
+                }
+
+                // Add ambient "water" rippling 
+                y += Math.sin(time * 2 + origin.x * 0.5 + origin.z * 0.3) * 0.2;
+
+                dummy.position.set(origin.x, y, origin.z);
+
+                // Scale based on height (Higher = Bigger)
+                const s = 1 + y * 0.5;
+                dummy.scale.set(s, s, s);
+
+                dummy.updateMatrix();
+                mesh.setMatrixAt(i, dummy.matrix);
+
+                // Dynamic Color
+                // If high (near mouse), turn White. Else Cyan.
+                const color = colorCyan.clone();
+                if (y > 1.0) {
+                    color.lerp(colorWhite, (y - 1.0) * 0.5);
+                }
+                // We use setColorAt for InstancedMesh coloring
+                mesh.setColorAt(i, color);
+            }
+
+            mesh.instanceMatrix.needsUpdate = true;
+            mesh.instanceColor.needsUpdate = true;
+
+            // Camera subtle breathing
+            camera.position.x = Math.sin(time * 0.1) * 2;
+            camera.lookAt(target.x * 0.1, 0, target.z * 0.1); // Look slightly at mouse
+
+            renderer.render(scene, camera);
+            requestAnimationFrame(tick);
+        };
+
+        tick();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Hide watermarks
+        const hideWatermarks = () => {
+            document.querySelectorAll('spline-viewer').forEach(viewer => {
+                if (viewer.shadowRoot) {
+                    const style = document.createElement('style');
+                    style.innerHTML = '#logo, .spline-watermark { display: none !important; opacity: 0 !important; }';
+                    viewer.shadowRoot.appendChild(style);
+                }
+            });
+        };
+        setInterval(hideWatermarks, 100);
+
+    </script>
+</body>
+
+</html>
