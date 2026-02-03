@@ -16,8 +16,8 @@ app.use(express.static(path.join(__dirname, '..')));
 
 // Admin Credentials
 const ADMIN_CREDENTIALS = {
-    username: process.env.ADMIN_USERNAME || 'Admin',
-    password: process.env.ADMIN_PASSWORD || 'Password123'
+    username: process.env.ADMIN_USERNAME || 'Nandish',
+    password: process.env.ADMIN_PASSWORD || 'Nandish_16_'
 };
 
 // --- API Endpoints ---
