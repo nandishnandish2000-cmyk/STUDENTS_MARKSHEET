@@ -216,9 +216,14 @@ const app = {
 
     handleAddStudent: async (e) => {
         e.preventDefault();
-        const name = document.getElementById('addName').value;
-        const regNo = document.getElementById('addRegNo').value;
+        const name = document.getElementById('addName').value.trim();
+        const regNo = document.getElementById('addRegNo').value.trim();
         const subjects = app.collectSubjects('addSubjectsContainer');
+
+        if (!name || !regNo) {
+            app.showToast('Name and Register Number are required', 'error');
+            return;
+        }
 
         if (!subjects || subjects.length === 0) {
             if (!subjects) return; // Error handled in collectSubjects
@@ -227,6 +232,7 @@ const app = {
         }
 
         try {
+            console.log(`Syncing student ${name} (${regNo}) to ${app.currentSemester}...`);
             const res = await fetch(`${API_BASE}/students/${app.currentSemester}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -235,12 +241,15 @@ const app = {
             const data = await res.json();
 
             if (data.success) {
+                console.log('Sync successful!');
                 app.showToast('Student Added Successfully', 'success');
                 app.loadStudentList(); // Go to list
             } else {
+                console.warn('Sync failed:', data.message);
                 app.showToast(data.message, 'error');
             }
         } catch (err) {
+            console.error('Network error during sync:', err);
             app.showToast('Failed to add student', 'error');
         }
     },
@@ -389,9 +398,14 @@ const app = {
     handleUpdateStudent: async (e) => {
         e.preventDefault();
         const id = document.getElementById('editStudentId').value;
-        const name = document.getElementById('editName').value;
-        const regNo = document.getElementById('editRegNo').value;
+        const name = document.getElementById('editName').value.trim();
+        const regNo = document.getElementById('editRegNo').value.trim();
         const subjects = app.collectSubjects('editSubjectsContainer');
+
+        if (!name || !regNo) {
+            app.showToast('Name and Register Number are required', 'error');
+            return;
+        }
 
         if (!subjects || subjects.length === 0) {
             if (!subjects) return; // Error handled
@@ -400,6 +414,7 @@ const app = {
         }
 
         try {
+            console.log(`Updating student record for ${name} (${regNo})...`);
             const res = await fetch(`${API_BASE}/students/${app.currentSemester}/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -408,12 +423,15 @@ const app = {
             const data = await res.json();
 
             if (data.success) {
+                console.log('Update successful!');
                 app.showToast('Student Updated Successfully', 'success');
                 app.loadStudentList();
             } else {
+                console.warn('Update failed:', data.message);
                 app.showToast(data.message, 'error');
             }
         } catch (err) {
+            console.error('Network error during update:', err);
             app.showToast('Update failed', 'error');
         }
     },
@@ -421,8 +439,13 @@ const app = {
     // --- Student Functions ---
     handleStudentLogin: async (e) => {
         e.preventDefault();
-        const name = document.getElementById('studentLoginName').value;
-        const regNo = document.getElementById('studentLoginRegNo').value;
+        const name = document.getElementById('studentLoginName').value.trim();
+        const regNo = document.getElementById('studentLoginRegNo').value.trim();
+
+        if (!name || !regNo) {
+            app.showToast('Please enter both name and register number', 'error');
+            return;
+        }
 
         try {
             const res = await fetch(`${API_BASE}/student/login`, {
@@ -433,20 +456,53 @@ const app = {
             const data = await res.json();
 
             if (data.success) {
-                app.currentStudentRegNo = regNo;
-                document.getElementById('welcomeStudentName').textContent = name;
+                app.currentStudentRegNo = data.regNo;
+                app.availableSemesters = data.availableSemesters || [];
+                document.getElementById('welcomeStudentName').textContent = data.studentName;
+
+                // Highlight semesters that have data
+                app.highlightAvailableSemesters();
+
                 app.navigateTo('studentSemesterSelect');
                 app.showToast('Login Successful', 'success');
             } else {
-                app.showToast(data.message, 'error');
+                app.showToast(data.message || 'Login failed', 'error');
             }
         } catch (err) {
-            app.showToast('Server Error', 'error');
+            app.showToast('Unable to connect to server', 'error');
+            console.error('Login Error:', err);
         }
+    },
+
+    highlightAvailableSemesters: () => {
+        const semesterButtons = document.querySelectorAll('#studentSemesterSelect .sem-btn');
+        semesterButtons.forEach(btn => {
+            const onclickAttr = btn.getAttribute('onclick');
+            if (onclickAttr && onclickAttr.includes('viewMarksheet')) {
+                const semesterId = onclickAttr.match(/'([^']+)'/)[1];
+                if (app.availableSemesters.includes(semesterId)) {
+                    btn.classList.add('border-cyan-400');
+                    btn.classList.remove('border-white/10');
+                    const badge = btn.querySelector('.text-slate-400');
+                    if (badge) {
+                        badge.textContent = 'Data Available';
+                        badge.classList.replace('text-slate-400', 'text-cyan-400');
+                    }
+                } else {
+                    btn.classList.replace('border-cyan-400', 'border-white/10');
+                    const badge = btn.querySelector('.text-cyan-400');
+                    if (badge) {
+                        badge.textContent = 'Data Semester';
+                        badge.classList.replace('text-cyan-400', 'text-slate-400');
+                    }
+                }
+            }
+        });
     },
 
     viewMarksheet: async (semesterId) => {
         try {
+            console.log(`Fetching marksheet for ${semesterId}...`);
             const res = await fetch(`${API_BASE}/student/${semesterId}/${app.currentStudentRegNo}`);
             const data = await res.json();
 
@@ -524,10 +580,11 @@ const app = {
 
                 app.navigateTo('studentMarksheet');
             } else {
-                app.showToast('No record found for this semester', 'error'); // Or just alert? Stick to toast.
+                app.showToast(data.message || 'No record found for this semester', 'error');
             }
         } catch (err) {
-            app.showToast('Error fetching marksheet', 'error');
+            console.error('Fetch Marksheet Error:', err);
+            app.showToast('Error fetching marksheet data', 'error');
         }
     },
 

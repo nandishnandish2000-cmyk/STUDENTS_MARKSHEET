@@ -14,10 +14,10 @@ app.use(morgan('dev'));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, '..')));
 
-// Admin Credentials (Hardcoded)
+// Admin Credentials
 const ADMIN_CREDENTIALS = {
-    username: 'Nandish',
-    password: 'Nandish_16_'
+    username: process.env.ADMIN_USERNAME || 'Admin',
+    password: process.env.ADMIN_PASSWORD || 'Password123'
 };
 
 // --- API Endpoints ---
@@ -59,39 +59,57 @@ app.get('/api/students/:semester', async (req, res) => {
 // 3. Add Student
 app.post('/api/students/:semester', async (req, res) => {
     const { semester } = req.params;
-    const { name, regNo, subjects } = req.body;
+    let { name, regNo, subjects } = req.body;
 
     if (!name || !regNo || !subjects || !Array.isArray(subjects)) {
         return res.status(400).json({ success: false, message: 'Invalid student data.' });
     }
 
+    // Clean data before saving
+    name = name.trim();
+    regNo = regNo.trim();
+
     try {
-        // Check if student exists in this semester
-        const [existing] = await db.query('SELECT * FROM students WHERE reg_no = ? AND semester = ?', [regNo, semester]);
+        // Check if student exists in this semester (Case-insensitive check)
+        const [existing] = await db.query(
+            'SELECT * FROM students WHERE LOWER(TRIM(reg_no)) = LOWER(?) AND semester = ?',
+            [regNo, semester]
+        );
+
         if (existing.length > 0) {
-            return res.status(400).json({ success: false, message: 'Student with this Register Number already exists' });
+            return res.status(400).json({ success: false, message: 'Student with this Register Number already exists in this semester' });
         }
 
         const uuid = Date.now().toString();
-        const [result] = await db.query('INSERT INTO students (uuid, name, reg_no, semester) VALUES (?, ?, ?, ?)', [uuid, name, regNo, semester]);
+        const [result] = await db.query(
+            'INSERT INTO students (uuid, name, reg_no, semester) VALUES (?, ?, ?, ?)',
+            [uuid, name, regNo, semester]
+        );
         const studentId = result.insertId;
 
         // Insert subjects
         for (const sub of subjects) {
-            await db.query('INSERT INTO marks (student_id, subject_name, mark, paper_type, overall_max_marks, internal_marks) VALUES (?, ?, ?, ?, ?, ?)', [studentId, sub.name, sub.mark, sub.paper_type || 'CORE', sub.overall_max_marks || 75, sub.internal_marks || 0]);
+            await db.query(
+                'INSERT INTO marks (student_id, subject_name, mark, paper_type, overall_max_marks, internal_marks) VALUES (?, ?, ?, ?, ?, ?)',
+                [studentId, sub.name.trim(), sub.mark, sub.paper_type || 'CORE', sub.overall_max_marks || 75, sub.internal_marks || 0]
+            );
         }
 
+        console.log(`Successfully added student: ${name} (${regNo}) to ${semester}`);
         res.json({ success: true, message: 'Student added successfully' });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ success: false, message: 'Database error' });
+        console.error('Error adding student:', err);
+        res.status(500).json({ success: false, message: 'Database error while adding student' });
     }
 });
 
 // 4. Update Student
 app.put('/api/students/:semester/:uuid', async (req, res) => {
     const { semester, uuid } = req.params;
-    const { name, regNo, subjects } = req.body;
+    let { name, regNo, subjects } = req.body;
+
+    name = name.trim();
+    regNo = regNo.trim();
 
     try {
         const [students] = await db.query('SELECT id FROM students WHERE uuid = ?', [uuid]);
@@ -99,9 +117,12 @@ app.put('/api/students/:semester/:uuid', async (req, res) => {
 
         const studentId = students[0].id;
 
-        // Check for duplicate RegNo
-        const [duplicate] = await db.query('SELECT * FROM students WHERE reg_no = ? AND semester = ? AND uuid != ?', [regNo, semester, uuid]);
-        if (duplicate.length > 0) return res.status(400).json({ success: false, message: 'Register Number already exists' });
+        // Check for duplicate RegNo in the same semester (excluding this student)
+        const [duplicate] = await db.query(
+            'SELECT * FROM students WHERE LOWER(TRIM(reg_no)) = LOWER(?) AND semester = ? AND uuid != ?',
+            [regNo, semester, uuid]
+        );
+        if (duplicate.length > 0) return res.status(400).json({ success: false, message: 'Register Number already exists in this semester' });
 
         // Update student info
         await db.query('UPDATE students SET name = ?, reg_no = ? WHERE id = ?', [name, regNo, studentId]);
@@ -109,13 +130,17 @@ app.put('/api/students/:semester/:uuid', async (req, res) => {
         // Replace subjects (Delete and Re-insert)
         await db.query('DELETE FROM marks WHERE student_id = ?', [studentId]);
         for (const sub of subjects) {
-            await db.query('INSERT INTO marks (student_id, subject_name, mark, paper_type, overall_max_marks, internal_marks) VALUES (?, ?, ?, ?, ?, ?)', [studentId, sub.name, sub.mark, sub.paper_type || 'CORE', sub.overall_max_marks || 75, sub.internal_marks || 0]);
+            await db.query(
+                'INSERT INTO marks (student_id, subject_name, mark, paper_type, overall_max_marks, internal_marks) VALUES (?, ?, ?, ?, ?, ?)',
+                [studentId, sub.name.trim(), sub.mark, sub.paper_type || 'CORE', sub.overall_max_marks || 75, sub.internal_marks || 0]
+            );
         }
 
+        console.log(`Successfully updated student: ${name} (${regNo})`);
         res.json({ success: true, message: 'Student updated successfully' });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ success: false, message: 'Database error' });
+        console.error('Error updating student:', err);
+        res.status(500).json({ success: false, message: 'Database error while updating student' });
     }
 });
 
@@ -132,27 +157,56 @@ app.delete('/api/students/:semester/:uuid', async (req, res) => {
     }
 });
 
-// 6. Student Login
+// 6. Student Login (Check if student exists in ANY semester)
 app.post('/api/student/login', async (req, res) => {
     const { name, regNo } = req.body;
+    if (!name || !regNo) {
+        return res.status(400).json({ success: false, message: 'Please enter both name and register number' });
+    }
+
+    const trimmedName = name.trim();
+    const trimmedRegNo = regNo.trim();
+
     try {
-        const [students] = await db.query('SELECT * FROM students WHERE name = ? AND reg_no = ?', [name, regNo]);
+        console.log(`Student login attempt: Name="${trimmedName}", RegNo="${trimmedRegNo}"`);
+
+        // Search for student across ALL semesters
+        const [students] = await db.query(
+            'SELECT DISTINCT name, reg_no, semester FROM students WHERE LOWER(TRIM(name)) = LOWER(?) AND LOWER(TRIM(reg_no)) = LOWER(?)',
+            [trimmedName, trimmedRegNo]
+        );
+
         if (students.length > 0) {
-            res.json({ success: true, message: 'Login successful', studentName: name, regNo: regNo });
+            const availableSemesters = students.map(s => s.semester);
+            console.log(`Login successful for ${students[0].name}. Available semesters:`, availableSemesters);
+
+            res.json({
+                success: true,
+                message: 'Login successful',
+                studentName: students[0].name,
+                regNo: students[0].reg_no,
+                availableSemesters: availableSemesters
+            });
         } else {
-            res.status(401).json({ success: false, message: 'Entered details are incorrect' });
+            console.warn(`Login failed for Name="${trimmedName}", RegNo="${trimmedRegNo}"`);
+            res.status(401).json({ success: false, message: 'No record found with these details. Please check your Name and Register Number.' });
         }
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ success: false, message: 'Database error' });
+        console.error('Login Error:', err);
+        res.status(500).json({ success: false, message: 'Internal server error occurred during login' });
     }
 });
 
 // 8. Get Overall Data for all Semesters
 app.get('/api/student/overall/:regNo', async (req, res) => {
-    const { regNo } = req.params;
+    const regNo = req.params.regNo.trim();
     try {
-        const [students] = await db.query('SELECT * FROM students WHERE reg_no = ? ORDER BY semester ASC', [regNo]);
+        console.log(`Fetching overall data for RegNo: ${regNo}`);
+        const [students] = await db.query(
+            'SELECT * FROM students WHERE LOWER(TRIM(reg_no)) = LOWER(?) ORDER BY semester ASC',
+            [regNo]
+        );
+
         if (students.length > 0) {
             const overallData = await Promise.all(students.map(async (student) => {
                 const [marks] = await db.query('SELECT subject_name as name, mark, paper_type, overall_max_marks, internal_marks FROM marks WHERE student_id = ?', [student.id]);
@@ -168,19 +222,24 @@ app.get('/api/student/overall/:regNo', async (req, res) => {
                 history: overallData
             });
         } else {
-            res.status(404).json({ success: false, message: 'No records found for this student' });
+            res.status(404).json({ success: false, message: 'No records found for this student ID' });
         }
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ success: false, message: 'Database error' });
+        console.error('Overall Data Error:', err);
+        res.status(500).json({ success: false, message: 'Internal server error while fetching overall data' });
     }
 });
 
 // 7. Get Single Student Data (for Student Portal)
 app.get('/api/student/:semester/:regNo', async (req, res) => {
-    const { semester, regNo } = req.params;
+    const semester = req.params.semester.trim();
+    const regNo = req.params.regNo.trim();
     try {
-        const [students] = await db.query('SELECT * FROM students WHERE reg_no = ? AND semester = ?', [regNo, semester]);
+        console.log(`Fetching specific marksheet: Sem=${semester}, RegNo=${regNo}`);
+        const [students] = await db.query(
+            'SELECT * FROM students WHERE LOWER(TRIM(reg_no)) = LOWER(?) AND LOWER(TRIM(semester)) = LOWER(?)',
+            [regNo, semester]
+        );
         if (students.length > 0) {
             const student = students[0];
             const [marks] = await db.query('SELECT subject_name as name, mark, paper_type, overall_max_marks, internal_marks FROM marks WHERE student_id = ?', [student.id]);
@@ -193,14 +252,21 @@ app.get('/api/student/:semester/:regNo', async (req, res) => {
                 }
             });
         } else {
-            res.status(404).json({ success: false, message: 'No record found for this semester' });
+            res.status(404).json({ success: false, message: `No record found for Semester: ${semester.replace('_', ' ')}` });
         }
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ success: false, message: 'Database error' });
+        console.error('Student Marksheet Error:', err);
+        res.status(500).json({ success: false, message: 'Internal server error while fetching marksheet' });
     }
 });
 
+
+// Connection Test
+db.query('SELECT 1').then(() => {
+    console.log('Database connected successfully');
+}).catch(err => {
+    console.error('Database connection failed:', err);
+});
 
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);

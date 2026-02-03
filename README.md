@@ -34,12 +34,13 @@ Use **Render** (easiest/free) to host the server:
 2.  Go to [Render.com](https://render.com/) and create a "Web Service".
 3.  Connect your GitHub repository.
 4.  In **Environment Variables**, add:
-    - `DB_HOST`: (Your online DB host)
-    - `DB_USER`: (Your online DB user)
-    - `DB_PASSWORD`: (Your online DB password)
-    - `DB_NAME`: (Your online DB name)
-    - `PORT`: `10000` (Render's default)
+    - `DB_HOST`: `your-database-host`
+    - `DB_USER`: `your-database-user`
+    - `DB_PASSWORD`: `your-database-password`
+    - `DB_NAME`: `your-database-name`
+    - `DB_PORT`: `3306`
+    - `PORT`: `10000`
 5.  Click **Deploy**.
 
-## Credentials
--   **Admin**: `Nandish` / `Nandish_16_`
+## Credentials (Example)
+-   **Admin**: `Admin` / `Password123`
