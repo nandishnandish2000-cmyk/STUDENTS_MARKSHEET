@@ -483,17 +483,21 @@ const app = {
                 if (app.availableSemesters.includes(semesterId)) {
                     btn.classList.add('border-cyan-400');
                     btn.classList.remove('border-white/10');
-                    const badge = btn.querySelector('.text-slate-400');
-                    if (badge) {
-                        badge.textContent = 'Data Available';
-                        badge.classList.replace('text-slate-400', 'text-cyan-400');
+                    // Target ONLY the second span (the text label)
+                    const spans = btn.querySelectorAll('span');
+                    if (spans.length >= 2) {
+                        spans[1].textContent = 'Data Available';
+                        spans[1].classList.remove('text-slate-400');
+                        spans[1].classList.add('text-cyan-400');
                     }
                 } else {
-                    btn.classList.replace('border-cyan-400', 'border-white/10');
-                    const badge = btn.querySelector('.text-cyan-400');
-                    if (badge) {
-                        badge.textContent = 'Data Semester';
-                        badge.classList.replace('text-cyan-400', 'text-slate-400');
+                    btn.classList.remove('border-cyan-400');
+                    btn.classList.add('border-white/10');
+                    const spans = btn.querySelectorAll('span');
+                    if (spans.length >= 2) {
+                        spans[1].textContent = 'Data Semester';
+                        spans[1].classList.remove('text-cyan-400');
+                        spans[1].classList.add('text-slate-400');
                     }
                 }
             }
