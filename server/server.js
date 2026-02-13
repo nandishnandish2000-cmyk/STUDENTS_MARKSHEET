@@ -4,10 +4,101 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const path = require('path');
 const morgan = require('morgan');
+const multer = require('multer');
+const Tesseract = require('tesseract.js');
+const fs = require('fs');
 const db = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Configure Multer for Marksheet Uploads
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = path.join(__dirname, '../uploads');
+        if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+});
+const upload = multer({ storage });
+
+// ... existing logic ...
+
+// --- Helper: Marksheet Text Parsing ---
+function parseMarksheetText(text) {
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 2);
+    const data = {
+        name: '',
+        regNo: '',
+        subjects: []
+    };
+
+    console.log("Analyzing extracted text matrix...");
+
+    // 1. Extract Name
+    const namePatterns = [
+        /(?:NAME OF THE EXAMINEE|CANDIDATE NAME|STUDENT NAME|NAME)[:\s]+([A-Z\s.]+)/i,
+        /^(?:NAME|CANDIDATE)\s*[:\s].*$/im
+    ];
+    for (const pat of namePatterns) {
+        const match = text.match(pat);
+        if (match && match[1]) {
+            data.name = match[1].trim();
+            break;
+        }
+    }
+
+    // 2. Extract Register Number
+    const regPatterns = [
+        /(?:REGISTER NUMBER|REG\.? NO|ROLL NO|ENROLLMENT|MATRIX ID)[:\s]+([A-Z0-9]+)/i,
+        /\b[0-9]{2}[A-Z]{3}[0-9]{3}\b/ // Common format like 18MER013
+    ];
+    for (const pat of regPatterns) {
+        const match = text.match(pat);
+        if (match) {
+            data.regNo = (match[1] || match[0]).trim();
+            break;
+        }
+    }
+
+    // 3. Extract Subjects and Marks
+    // We look for patterns like: "ENGLISH 25 60 PASS" or "MATHEMATICS CORE 75 10 50"
+    for (const line of lines) {
+        // Skip header lines
+        if (/semester|marksheet|result|statement|examinee|register/i.test(line)) continue;
+
+        // Pattern 1: [Subject] [Int] [Ext] [Result]
+        const pattern1 = line.match(/^([A-Za-z\s]+)\s+(\d{1,2})\s+(\d{1,3})\s+(PASS|FAIL|P|F|E)\b/i);
+        if (pattern1) {
+            data.subjects.push({
+                name: pattern1[1].trim(),
+                paper_type: 'CORE',
+                overall_max_marks: 75,
+                internal_marks: parseInt(pattern1[2]),
+                mark: parseInt(pattern1[3])
+            });
+            continue;
+        }
+
+        // Pattern 2: [Subject] [Mark] [Result] (Less detailed)
+        const pattern2 = line.match(/^([A-Za-z\s]+)\s+(\d{2,3})\s+(PASS|FAIL|P|F|E)\b/i);
+        if (pattern2) {
+            data.subjects.push({
+                name: pattern2[1].trim(),
+                paper_type: 'CORE',
+                overall_max_marks: 75,
+                internal_marks: 0,
+                mark: parseInt(pattern2[2])
+            });
+        }
+    }
+
+    return data;
+}
 
 // Middleware
 app.use(cors());
@@ -108,7 +199,11 @@ app.post('/api/students/:semester', async (req, res) => {
         res.json({ success: true, message: 'Student added successfully' });
     } catch (err) {
         console.error('Error adding student:', err);
-        res.status(500).json({ success: false, message: 'Database error while adding student' });
+        res.status(500).json({
+            success: false,
+            message: 'Database error: ' + (err.sqlMessage || err.message || 'Unknown error'),
+            details: err.code === 'ER_DUP_ENTRY' ? 'Duplicate record detected' : undefined
+        });
     }
 });
 
@@ -269,6 +364,38 @@ app.get('/api/student/:semester/:regNo', async (req, res) => {
     }
 });
 
+
+// 9. Extract Marksheet Data via OCR
+app.post('/api/extract-marksheet', upload.single('marksheet'), async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    const filePath = req.file.path;
+    console.log(`[OCR] Incoming file: ${req.file.originalname} -> ${filePath}`);
+
+    try {
+        const { data: { text } } = await Tesseract.recognize(filePath, 'eng', {
+            logger: m => console.log(`[OCR Status] ${m.status}: ${Math.round(m.progress * 100)}%`)
+        });
+
+        const extractedData = parseMarksheetText(text);
+
+        // Clean up temp file
+        fs.unlinkSync(filePath);
+
+        res.json({
+            success: true,
+            message: 'Image decoded successfully',
+            data: extractedData,
+            rawText: text // Useful for debugging
+        });
+    } catch (err) {
+        console.error('[OCR Error]', err);
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        res.status(500).json({ success: false, message: 'Neural matrix extraction failed', error: err.message });
+    }
+});
 
 // Connection Test
 db.query('SELECT 1').then(() => {

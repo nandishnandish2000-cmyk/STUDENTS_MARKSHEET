@@ -735,6 +735,123 @@ const app = {
         }
 
         insightsEl.innerHTML = insightText;
+    },
+
+    // --- Marksheet Upload & Extraction ---
+    handleMarksheetFileSelect: (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+            app.showToast('File size exceeds 5MB limit', 'error');
+            return;
+        }
+
+        document.getElementById('fileName').textContent = file.name;
+        document.getElementById('fileSize').textContent = (file.size / 1024).toFixed(1) + ' KB';
+        document.getElementById('fileInfo').classList.remove('hidden');
+    },
+
+    processMarksheet: async () => {
+        const fileInput = document.getElementById('marksheetFile');
+        const file = fileInput.files[0];
+        if (!file) return;
+
+        document.getElementById('uploadStep1').classList.add('hidden');
+        document.getElementById('extractionLoader').classList.remove('hidden');
+
+        const formData = new FormData();
+        formData.append('marksheet', file);
+
+        try {
+            console.log("Transmitting data to extraction matrix...");
+            const res = await fetch(`${API_BASE}/extract-marksheet`, {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+
+            document.getElementById('extractionLoader').classList.add('hidden');
+
+            if (data.success) {
+                app.displayExtractedData(data.data);
+                document.getElementById('uploadStep2').classList.remove('hidden');
+                app.showToast('Neural extraction complete', 'success');
+            } else {
+                app.showToast(data.message || 'Extraction failed', 'error');
+                document.getElementById('uploadStep1').classList.remove('hidden');
+            }
+        } catch (err) {
+            console.error(err);
+            app.showToast('Matrix connection error', 'error');
+            document.getElementById('extractionLoader').classList.add('hidden');
+            document.getElementById('uploadStep1').classList.remove('hidden');
+        }
+    },
+
+    displayExtractedData: (data) => {
+        document.getElementById('extractedName').value = data.name || '';
+        document.getElementById('extractedRegNo').value = data.regNo || '';
+        const container = document.getElementById('extractedSubjectsContainer');
+        container.innerHTML = '';
+
+        if (data.subjects && data.subjects.length > 0) {
+            data.subjects.forEach(sub => {
+                app.addSubjectRow('extractedSubjectsContainer', sub);
+            });
+        } else {
+            // Add at least one empty row if none found
+            app.addSubjectRow('extractedSubjectsContainer');
+        }
+    },
+
+    cancelUpload: () => {
+        document.getElementById('uploadStep2').classList.add('hidden');
+        document.getElementById('uploadStep1').classList.remove('hidden');
+        document.getElementById('marksheetFile').value = '';
+        document.getElementById('fileInfo').classList.add('hidden');
+        app.navigateTo('adminDashboard');
+    },
+
+    saveExtractedData: async () => {
+        const name = document.getElementById('extractedName').value.trim();
+        const regNo = document.getElementById('extractedRegNo').value.trim();
+        const subjects = app.collectSubjects('extractedSubjectsContainer');
+
+        if (!name || !regNo) {
+            app.showToast('Name and Register Number are required', 'error');
+            return;
+        }
+
+        if (!subjects || subjects.length === 0) {
+            if (subjects !== null) app.showToast('Please add at least one subject', 'error');
+            return;
+        }
+
+        try {
+            console.log(`Committing extracted data to ${app.currentSemester}...`);
+            const res = await fetch(`${API_BASE}/students/${app.currentSemester}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, regNo, subjects })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                app.showToast('Data committed to registry', 'success');
+                app.loadStudentList();
+                // Reset upload state
+                document.getElementById('uploadStep2').classList.add('hidden');
+                document.getElementById('uploadStep1').classList.remove('hidden');
+                document.getElementById('marksheetFile').value = '';
+                document.getElementById('fileInfo').classList.add('hidden');
+            } else {
+                app.showToast(data.message, 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            app.showToast('Registry sync failed', 'error');
+        }
     }
 };
 
