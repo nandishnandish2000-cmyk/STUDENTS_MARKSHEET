@@ -210,7 +210,10 @@ const app = {
                 return;
             }
 
-            subjects.push({ name, paper_type, overall_max_marks, internal_marks, mark });
+            const resultEl = row.querySelector('.subject-result');
+            const result = resultEl ? resultEl.value : (mark >= overall_max_marks * 0.4 ? 'PASS' : 'FAIL');
+
+            subjects.push({ name, paper_type, overall_max_marks, internal_marks, mark, result });
         });
 
         if (error) {
@@ -748,49 +751,105 @@ const app = {
     handleMarksheetFileSelect: (e) => {
         const file = e.target.files[0];
         if (!file) return;
+        app._handleMarksheetFile(file);
+    },
 
+    handleMarksheetFileDrop: (e) => {
+        const file = e.dataTransfer.files[0];
+        if (!file) return;
+        app._handleMarksheetFile(file);
+    },
+
+    _handleMarksheetFile: (file) => {
         if (file.size > 5 * 1024 * 1024) {
             app.showToast('File size exceeds 5MB limit', 'error');
             return;
         }
+        // Store file globally
+        app._currentMarksheetFile = file;
 
         document.getElementById('fileName').textContent = file.name;
         document.getElementById('fileSize').textContent = (file.size / 1024).toFixed(1) + ' KB';
         document.getElementById('fileInfo').classList.remove('hidden');
+
+        // Show preview in step 1
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const prev1 = document.getElementById('uploadPreviewImg1');
+            const wrap1 = document.getElementById('uploadImagePreview1');
+            if (prev1 && wrap1) {
+                prev1.src = ev.target.result;
+                wrap1.classList.remove('hidden');
+            }
+            // Also pre-store for step 2
+            app._currentMarksheetDataUrl = ev.target.result;
+        };
+        reader.readAsDataURL(file);
     },
 
     processMarksheet: async () => {
         const fileInput = document.getElementById('marksheetFile');
-        const file = fileInput.files[0];
-        if (!file) return;
+        const file = app._currentMarksheetFile || (fileInput.files && fileInput.files[0]);
+        if (!file) {
+            app.showToast('Please select a file first', 'error');
+            return;
+        }
 
+        // Hide step 1, show loader
         document.getElementById('uploadStep1').classList.add('hidden');
         document.getElementById('extractionLoader').classList.remove('hidden');
+        document.getElementById('uploadStep2').classList.add('hidden');
+
+        // Animate progress bar
+        let pct = 5;
+        const progressBar = document.getElementById('ocrProgressBar');
+        const progressText = document.getElementById('ocrProgressText');
+        const progressInterval = setInterval(() => {
+            pct = Math.min(pct + Math.random() * 8, 90);
+            if (progressBar) progressBar.style.width = pct + '%';
+            if (progressText) {
+                if (pct < 20) progressText.textContent = 'Loading OCR engine...';
+                else if (pct < 50) progressText.textContent = 'Detecting text regions...';
+                else if (pct < 75) progressText.textContent = 'Reading characters...';
+                else progressText.textContent = 'Parsing extracted text...';
+            }
+        }, 800);
 
         const formData = new FormData();
         formData.append('marksheet', file);
 
         try {
-            console.log("Transmitting data to extraction matrix...");
             const res = await fetch(`${API_BASE}/extract-marksheet`, {
                 method: 'POST',
                 body: formData
             });
             const data = await res.json();
 
+            clearInterval(progressInterval);
+            if (progressBar) progressBar.style.width = '100%';
+
             document.getElementById('extractionLoader').classList.add('hidden');
 
             if (data.success) {
+                // Show image in step 2
+                const previewImg = document.getElementById('uploadedMarksheetPreview');
+                if (previewImg && app._currentMarksheetDataUrl) {
+                    previewImg.src = app._currentMarksheetDataUrl;
+                }
+                // Show raw OCR text
+                const rawEl = document.getElementById('rawOcrText');
+                if (rawEl) rawEl.textContent = data.rawText || '(No text extracted)';
+
                 app.displayExtractedData(data.data);
                 document.getElementById('uploadStep2').classList.remove('hidden');
-                app.showToast('Neural extraction complete', 'success');
             } else {
                 app.showToast(data.message || 'Extraction failed', 'error');
                 document.getElementById('uploadStep1').classList.remove('hidden');
             }
         } catch (err) {
+            clearInterval(progressInterval);
             console.error(err);
-            app.showToast('Matrix connection error', 'error');
+            app.showToast('Connection error — please try again', 'error');
             document.getElementById('extractionLoader').classList.add('hidden');
             document.getElementById('uploadStep1').classList.remove('hidden');
         }
@@ -799,32 +858,35 @@ const app = {
     displayExtractedData: (data) => {
         document.getElementById('extractedName').value = data.name || '';
         document.getElementById('extractedRegNo').value = data.regNo || '';
+
         const container = document.getElementById('extractedSubjectsContainer');
         container.innerHTML = '';
 
-        // Add "Add Subject" button above list if not already present
-        const addBtnWrap = document.getElementById('extractedAddSubjectBtnWrap');
-        if (addBtnWrap) {
-            addBtnWrap.classList.remove('hidden');
-        }
+        const hint = document.getElementById('noSubjectsHint');
 
         if (data.subjects && data.subjects.length > 0) {
-            data.subjects.forEach(sub => {
-                app.addSubjectRow('extractedSubjectsContainer', sub);
-            });
-            app.showToast(`Extracted ${data.subjects.length} subject(s)`, 'success');
+            data.subjects.forEach(sub => app.addSubjectRow('extractedSubjectsContainer', sub));
+            if (hint) hint.classList.add('hidden');
+            const nameVal = data.name ? `\"${data.name}\"` : 'unknown';
+            app.showToast(`Extracted ${data.subjects.length} subject(s) for ${nameVal}`, 'success');
         } else {
-            // Add at least one empty row if none found
+            // Show hint to fill manually
             app.addSubjectRow('extractedSubjectsContainer');
-            app.showToast('No subjects auto-detected. Please fill in manually.', 'info');
+            if (hint) hint.classList.remove('hidden');
+            app.showToast('No subjects auto-detected — check raw text and fill manually', 'info');
         }
     },
 
     cancelUpload: () => {
         document.getElementById('uploadStep2').classList.add('hidden');
+        document.getElementById('extractionLoader').classList.add('hidden');
         document.getElementById('uploadStep1').classList.remove('hidden');
         document.getElementById('marksheetFile').value = '';
         document.getElementById('fileInfo').classList.add('hidden');
+        const wrap1 = document.getElementById('uploadImagePreview1');
+        if (wrap1) wrap1.classList.add('hidden');
+        app._currentMarksheetFile = null;
+        app._currentMarksheetDataUrl = null;
         app.navigateTo('adminDashboard');
     },
 

@@ -517,24 +517,28 @@ app.post('/api/extract-marksheet', upload.single('marksheet'), async (req, res) 
 
     try {
         const { data: { text } } = await Tesseract.recognize(filePath, 'eng', {
-            logger: m => console.log(`[OCR Status] ${m.status}: ${Math.round(m.progress * 100)}%`)
+            logger: m => {
+                if (m.status === 'recognizing text') {
+                    console.log(`[OCR] ${Math.round(m.progress * 100)}% done`);
+                }
+            }
         });
 
         const extractedData = parseMarksheetText(text);
 
         // Clean up temp file
-        fs.unlinkSync(filePath);
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
         res.json({
             success: true,
             message: 'Image decoded successfully',
             data: extractedData,
-            rawText: text // Useful for debugging
+            rawText: text
         });
     } catch (err) {
         console.error('[OCR Error]', err);
         if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-        res.status(500).json({ success: false, message: 'Neural matrix extraction failed', error: err.message });
+        res.status(500).json({ success: false, message: 'OCR extraction failed', error: err.message });
     }
 });
 
