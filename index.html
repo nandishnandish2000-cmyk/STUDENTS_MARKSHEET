@@ -449,7 +449,9 @@
                         class="text-slate-400 hover:text-cyan-400 transition text-xl"><i
                             class="fas fa-arrow-left"></i></button>
                     <div>
-                        <h2 class="text-2xl font-bold text-white font-[Orbitron]">Control Hub</h2>
+                        <h2 class="text-2xl font-bold text-white font-[Orbitron]">Control Hub <span
+                                class="text-[10px] text-cyan-500 bg-cyan-500/10 px-2 py-0.5 rounded ml-2 border border-cyan-500/20">V2.0</span>
+                        </h2>
                         <span id="adminCurrentSemesterDisplay"
                             class="text-cyan-400 text-sm font-bold uppercase tracking-widest mt-1 block"></span>
                     </div>
@@ -467,6 +469,7 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+                <!-- MODULE 1: MANUAL DEPLOY -->
                 <div class="glass-card p-10 rounded-2xl text-center cursor-pointer hover:scale-105 transition-all group border-blue-500/20"
                     onclick="app.navigateToAddStudent()">
                     <div
@@ -476,8 +479,9 @@
                     <h3 class="text-xl font-bold text-white uppercase tracking-wider">Deploy Student</h3>
                     <p class="text-slate-400 text-sm mt-2">Initialize new record in database</p>
                 </div>
-                <!-- UPLOAD MARKSHEET MODULE -->
-                <div class="glass-card p-10 rounded-2xl text-center cursor-pointer hover:scale-105 transition-all group border-purple-500/20"
+
+                <!-- MODULE 2: NEURAL OCR UPLOAD -->
+                <div class="glass-card p-10 rounded-2xl text-center cursor-pointer hover:scale-105 transition-all group border-purple-500/20 bg-purple-500/5 shadow-[0_0_30px_rgba(168,85,247,0.1)]"
                     onclick="app.navigateTo('uploadMarksheetPage')">
                     <div
                         class="text-5xl text-purple-400 mb-6 group-hover:drop-shadow-[0_0_15px_rgba(192,132,252,0.5)] transition">
@@ -486,6 +490,8 @@
                     <h3 class="text-xl font-bold text-white uppercase tracking-wider">Upload Marksheet</h3>
                     <p class="text-slate-400 text-sm mt-2">Extract data from image files</p>
                 </div>
+
+                <!-- MODULE 3: DATABASE ACCESS -->
                 <div class="glass-card p-10 rounded-2xl text-center cursor-pointer hover:scale-105 transition-all group border-emerald-500/20"
                     onclick="app.loadStudentList()">
                     <div
@@ -572,10 +578,16 @@
                     <div class="border-t border-white/10 pt-8">
                         <div class="flex justify-between items-center mb-6">
                             <label class="block text-sm font-bold text-slate-300 tracking-widest uppercase">Extracted
-                                Subjects (Nodes)</label>
+                                Subjects</label>
+                            <div id="extractedAddSubjectBtnWrap" class="hidden">
+                                <button type="button" onclick="app.addSubjectRow('extractedSubjectsContainer')"
+                                    class="text-xs bg-cyan-500/10 text-cyan-400 px-4 py-2 rounded-xl hover:bg-cyan-500/20 border border-cyan-500/30 transition-all font-bold">
+                                    <i class="fas fa-plus-circle mr-2"></i> Add Subject
+                                </button>
+                            </div>
                         </div>
                         <div id="extractedSubjectsContainer"
-                            class="space-y-4 max-h-80 overflow-y-auto pr-3 custom-scrollbar">
+                            class="space-y-4 max-h-96 overflow-y-auto pr-3 custom-scrollbar">
                             <!-- Dynamic Subject Rows -->
                         </div>
                     </div>

@@ -7,6 +7,7 @@ const app = {
 
     // --- Navigation ---
     navigateTo: (viewId) => {
+        console.log(`Navigating to view: ${viewId}`);
         // Hide all views
         document.querySelectorAll('.view-section').forEach(el => {
             el.classList.add('hidden');
@@ -121,53 +122,59 @@ const app = {
 
     addSubjectRow: (containerId, initialData = null) => {
         const container = document.getElementById(containerId);
-        if (!container) return; // Safety check
+        if (!container) return;
 
         const div = document.createElement('div');
-        div.className = 'flex flex-wrap gap-2 items-end border-b border-gray-100 pb-2 mb-2 subject-row'; // Added subject-row class
+        div.className = 'flex flex-wrap gap-2 items-end border-b border-white/10 pb-4 mb-4 subject-row';
 
-        // Defaults with explicit checks
         const subjectName = (initialData && initialData.name) ? initialData.name : '';
         const paperType = (initialData && initialData.paper_type) ? initialData.paper_type : 'CORE';
         const overallMax = (initialData && initialData.overall_max_marks) ? initialData.overall_max_marks : 75;
         const internal = (initialData && initialData.internal_marks !== undefined) ? initialData.internal_marks : 0;
         const mark = (initialData && initialData.mark !== undefined) ? initialData.mark : '';
+        // Result field — only shown in upload/extracted context
+        const result = (initialData && initialData.result) ? initialData.result : 'PASS';
+        const showResult = containerId === 'extractedSubjectsContainer';
 
         div.innerHTML = `
             <div class="flex-1 min-w-[150px]">
-                <label class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Layer Name</label>
-                <input type="text" placeholder="e.g., Core Engine" class="subject-name w-full bg-slate-900 border-slate-700 rounded-xl p-3 text-white focus:ring-cyan-500 focus:border-cyan-500 transition-all" value="${subjectName}" required>
+                <label class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Subject Name</label>
+                <input type="text" placeholder="e.g., Mathematics" class="subject-name w-full bg-slate-900 border-slate-700 rounded-xl p-3 text-white focus:ring-cyan-500 focus:border-cyan-500 transition-all" value="${subjectName}" required>
             </div>
-            
-            <div class="w-32">
-                <label class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Protocol</label>
+            <div class="w-28">
+                <label class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Type</label>
                 <select class="paper-type w-full bg-slate-900 border-slate-700 rounded-xl p-3 text-white focus:ring-cyan-500 focus:border-cyan-500 transition-all">
                     <option value="CORE" ${paperType === 'CORE' ? 'selected' : ''}>CORE</option>
                     <option value="ALLIED" ${paperType === 'ALLIED' ? 'selected' : ''}>ALLIED</option>
                     <option value="PRACTICAL" ${paperType === 'PRACTICAL' ? 'selected' : ''}>PRACTICAL</option>
                 </select>
             </div>
-
-            <div class="w-24">
-                <label class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Max Ext</label>
+            <div class="w-20">
+                <label class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Max</label>
                 <select class="overall-max w-full bg-slate-900 border-slate-700 rounded-xl p-3 text-white focus:ring-cyan-500 focus:border-cyan-500 transition-all">
                     <option value="25" ${overallMax == 25 ? 'selected' : ''}>25</option>
                     <option value="50" ${overallMax == 50 ? 'selected' : ''}>50</option>
                     <option value="75" ${overallMax == 75 ? 'selected' : ''}>75</option>
+                    <option value="100" ${overallMax == 100 ? 'selected' : ''}>100</option>
                 </select>
             </div>
-
-            <div class="w-20">
+            <div class="w-16">
                 <label class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Int</label>
-                <input type="number" min="0" max="25" class="internal-mark w-full bg-slate-900 border-slate-700 rounded-xl p-3 text-white focus:ring-cyan-500 focus:border-cyan-500 transition-all" value="${internal}" required>
+                <input type="number" min="0" max="25" class="internal-mark w-full bg-slate-900 border-slate-700 rounded-xl p-3 text-white focus:ring-cyan-500 focus:border-cyan-500 transition-all" value="${internal}">
             </div>
-
-            <div class="w-20">
+            <div class="w-16">
                 <label class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Ext</label>
                 <input type="number" min="0" class="subject-mark w-full bg-slate-900 border-slate-700 rounded-xl p-3 text-white focus:ring-cyan-500 focus:border-cyan-500 transition-all" value="${mark}" required>
             </div>
-
-            <button type="button" onclick="this.parentElement.remove()" class="text-rose-500 hover:text-rose-400 p-3 mb-1 transition-colors"><i class="fas fa-trash-alt"></i></button>
+            ${showResult ? `
+            <div class="w-24">
+                <label class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Result</label>
+                <select class="subject-result w-full bg-slate-900 border-slate-700 rounded-xl p-3 font-bold focus:ring-cyan-500 focus:border-cyan-500 transition-all ${result === 'PASS' ? 'text-emerald-400' : 'text-rose-400'}" onchange="this.className=this.value==='PASS'?'subject-result w-full bg-slate-900 border-slate-700 rounded-xl p-3 font-bold focus:ring-cyan-500 focus:border-cyan-500 transition-all text-emerald-400':'subject-result w-full bg-slate-900 border-slate-700 rounded-xl p-3 font-bold focus:ring-cyan-500 focus:border-cyan-500 transition-all text-rose-400'">
+                    <option value="PASS" ${result === 'PASS' ? 'selected' : ''} style="color:#34d399">PASS</option>
+                    <option value="FAIL" ${result === 'FAIL' ? 'selected' : ''} style="color:#f87171">FAIL</option>
+                </select>
+            </div>` : ''}
+            <button type="button" onclick="this.parentElement.remove()" class="text-rose-500 hover:text-rose-400 p-3 mb-1 transition-colors flex-shrink-0"><i class="fas fa-trash-alt"></i></button>
         `;
         container.appendChild(div);
     },
@@ -795,13 +802,21 @@ const app = {
         const container = document.getElementById('extractedSubjectsContainer');
         container.innerHTML = '';
 
+        // Add "Add Subject" button above list if not already present
+        const addBtnWrap = document.getElementById('extractedAddSubjectBtnWrap');
+        if (addBtnWrap) {
+            addBtnWrap.classList.remove('hidden');
+        }
+
         if (data.subjects && data.subjects.length > 0) {
             data.subjects.forEach(sub => {
                 app.addSubjectRow('extractedSubjectsContainer', sub);
             });
+            app.showToast(`Extracted ${data.subjects.length} subject(s)`, 'success');
         } else {
             // Add at least one empty row if none found
             app.addSubjectRow('extractedSubjectsContainer');
+            app.showToast('No subjects auto-detected. Please fill in manually.', 'info');
         }
     },
 

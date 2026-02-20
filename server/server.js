@@ -28,75 +28,216 @@ const upload = multer({ storage });
 
 // ... existing logic ...
 
-// --- Helper: Marksheet Text Parsing ---
+// --- Helper: Marksheet Text Parsing (Enhanced) ---
 function parseMarksheetText(text) {
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 2);
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 1);
     const data = {
         name: '',
         regNo: '',
         subjects: []
     };
 
-    console.log("Analyzing extracted text matrix...");
+    console.log("=== RAW OCR TEXT START ===");
+    console.log(text);
+    console.log("=== RAW OCR TEXT END ===");
 
-    // 1. Extract Name
+    // ─── 1. Extract Student Name ─────────────────────────────────────────────
     const namePatterns = [
-        /(?:NAME OF THE EXAMINEE|CANDIDATE NAME|STUDENT NAME|NAME)[:\s]+([A-Z\s.]+)/i,
-        /^(?:NAME|CANDIDATE)\s*[:\s].*$/im
+        /(?:name\s+of\s+(?:the\s+)?(?:examinee|student|candidate)|student\s+name|candidate\s+name|name)\s*[:\-]?\s*([A-Za-z][A-Za-z\s.]{2,50})/i,
+        /(?:examinee|student)\s*[:\-]\s*([A-Za-z][A-Za-z\s.]{2,50})/i,
+        /^name\s*[:\-]?\s+([A-Za-z][A-Za-z\s.]+)$/im,
     ];
     for (const pat of namePatterns) {
-        const match = text.match(pat);
-        if (match && match[1]) {
-            data.name = match[1].trim();
-            break;
+        const m = text.match(pat);
+        if (m && m[1]) {
+            // Clean: remove trailing numbers/codes
+            let name = m[1].trim().replace(/\s*\d+.*$/, '').trim();
+            if (name.length >= 3 && name.length <= 80) {
+                data.name = name;
+                break;
+            }
+        }
+    }
+    // Fallback: look line by line for "Name : XYZ"
+    if (!data.name) {
+        for (const line of lines) {
+            const m = line.match(/^(?:name|student name|candidate)\s*[:\-]\s*(.+)$/i);
+            if (m && m[1] && m[1].trim().length > 2) {
+                data.name = m[1].trim().replace(/\s*\d+.*$/, '').trim();
+                break;
+            }
         }
     }
 
-    // 2. Extract Register Number
+    // ─── 2. Extract Register / Roll Number ──────────────────────────────────
     const regPatterns = [
-        /(?:REGISTER NUMBER|REG\.? NO|ROLL NO|ENROLLMENT|MATRIX ID)[:\s]+([A-Z0-9]+)/i,
-        /\b[0-9]{2}[A-Z]{3}[0-9]{3}\b/ // Common format like 18MER013
+        /(?:register(?:ation)?\s*(?:number|no\.?)|reg(?:\.?\s*no\.?)|roll\s*(?:no\.?|number)|enrollment\s*(?:no\.?|number)|hall\s*ticket)\s*[:\-]?\s*([A-Z0-9\/\-]{4,20})/i,
+        /\b([0-9]{2}[A-Z]{2,4}[0-9]{2,6})\b/,   // e.g. 21CS101, 20BCA003
+        /\b([A-Z]{2,4}[0-9]{2,4}[A-Z0-9]{2,6})\b/, // e.g. CS21A001
     ];
     for (const pat of regPatterns) {
-        const match = text.match(pat);
-        if (match) {
-            data.regNo = (match[1] || match[0]).trim();
+        const m = text.match(pat);
+        if (m) {
+            data.regNo = (m[1] || m[0]).trim();
             break;
         }
     }
+    // Fallback: line-by-line
+    if (!data.regNo) {
+        for (const line of lines) {
+            const m = line.match(/(?:reg(?:ister)?(?:ation)?\s*(?:no|number)?|roll\s*no)\s*[:\-]\s*([A-Z0-9\/\-]{4,20})/i);
+            if (m && m[1]) {
+                data.regNo = m[1].trim();
+                break;
+            }
+        }
+    }
 
-    // 3. Extract Subjects and Marks
-    // We look for patterns like: "ENGLISH 25 60 PASS" or "MATHEMATICS CORE 75 10 50"
-    for (const line of lines) {
-        // Skip header lines
-        if (/semester|marksheet|result|statement|examinee|register/i.test(line)) continue;
+    // ─── 3. Extract Subjects & Marks ─────────────────────────────────────────
+    // We scan every line and try many patterns, covering most Indian university marksheet layouts.
 
-        // Pattern 1: [Subject] [Int] [Ext] [Result]
-        const pattern1 = line.match(/^([A-Za-z\s]+)\s+(\d{1,2})\s+(\d{1,3})\s+(PASS|FAIL|P|F|E)\b/i);
-        if (pattern1) {
-            data.subjects.push({
-                name: pattern1[1].trim(),
-                paper_type: 'CORE',
-                overall_max_marks: 75,
-                internal_marks: parseInt(pattern1[2]),
-                mark: parseInt(pattern1[3])
-            });
-            continue;
+    // Keywords to skip (header/footer lines)
+    const skipKeywords = /^(semester|marksheet|result sheet|statement of marks|university|college|hall ticket|register|roll no|name of|candidate|year|branch|degree|department|date|signature|principal|controller|total|grand total|head of|percentage|cgpa|sgpa|gpa|class|division|remarks|note|legend|code|subject code|sub\.?\s*code|sl\.?\s*no|s\.no|sno|serial|subject\s+name|internal|external|max|min|obtain|theory|practical|lab|paper)$/i;
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        if (skipKeywords.test(line)) continue;
+        if (line.length < 3) continue;
+
+        let subjectName = null;
+        let internalMark = 0;
+        let externalMark = null;
+        let maxMarks = 75;
+        let paperType = 'CORE';
+        let result = null;
+
+        // ── Pattern A: "Subject Name  INT  EXT  TOTAL  MAX  RESULT"
+        // e.g. "MATHEMATICS  18  52  70  100  PASS"
+        const patA = line.match(/^([A-Za-z][A-Za-z\s\-\/&().,']{1,60}?)\s{2,}(\d{1,2})\s+(\d{1,3})\s+\d{1,3}\s+(\d{2,3})\s+(PASS|FAIL|P|F|AB|ABSENT)\b/i);
+        if (patA) {
+            subjectName = patA[1].trim();
+            internalMark = parseInt(patA[2]);
+            externalMark = parseInt(patA[3]);
+            maxMarks = parseInt(patA[4]) || 75;
+            result = patA[5].toUpperCase();
         }
 
-        // Pattern 2: [Subject] [Mark] [Result] (Less detailed)
-        const pattern2 = line.match(/^([A-Za-z\s]+)\s+(\d{2,3})\s+(PASS|FAIL|P|F|E)\b/i);
-        if (pattern2) {
+        // ── Pattern B: "Subject Name  INT  EXT  RESULT"
+        // e.g. "ENGLISH  20  55  PASS"
+        if (!subjectName) {
+            const patB = line.match(/^([A-Za-z][A-Za-z\s\-\/&().,']{1,60}?)\s{2,}(\d{1,2})\s+(\d{1,3})\s+(PASS|FAIL|P|F|AB|ABSENT)\b/i);
+            if (patB) {
+                subjectName = patB[1].trim();
+                internalMark = parseInt(patB[2]);
+                externalMark = parseInt(patB[3]);
+                result = patB[4].toUpperCase();
+            }
+        }
+
+        // ── Pattern C: "Subject Name  TOTAL  MAX  RESULT"
+        // e.g. "PHYSICS  68  100  PASS"
+        if (!subjectName) {
+            const patC = line.match(/^([A-Za-z][A-Za-z\s\-\/&().,']{1,60}?)\s{2,}(\d{2,3})\s+(\d{2,3})\s+(PASS|FAIL|P|F|AB|ABSENT)\b/i);
+            if (patC) {
+                subjectName = patC[1].trim();
+                externalMark = parseInt(patC[2]);
+                maxMarks = parseInt(patC[3]) || 75;
+                result = patC[4].toUpperCase();
+            }
+        }
+
+        // ── Pattern D: "Subject Name  MARK  RESULT"  (minimal)
+        // e.g. "CHEMISTRY  72  PASS"
+        if (!subjectName) {
+            const patD = line.match(/^([A-Za-z][A-Za-z\s\-\/&().,']{1,60}?)\s{2,}(\d{2,3})\s+(PASS|FAIL|P|F|ABSENT)\b/i);
+            if (patD) {
+                subjectName = patD[1].trim();
+                externalMark = parseInt(patD[2]);
+                result = patD[3].toUpperCase();
+            }
+        }
+
+        // ── Pattern E: "Subject Name  INT  EXT"  (no result column)
+        // e.g. "DATA STRUCTURES  22  58"
+        if (!subjectName) {
+            const patE = line.match(/^([A-Za-z][A-Za-z\s\-\/&().,']{1,60}?)\s{2,}(\d{1,2})\s+(\d{1,3})$/);
+            if (patE) {
+                const int_ = parseInt(patE[2]);
+                const ext_ = parseInt(patE[3]);
+                // Only accept if looks like valid marks (int<=25, ext<=100)
+                if (int_ <= 25 && ext_ <= 100) {
+                    subjectName = patE[1].trim();
+                    internalMark = int_;
+                    externalMark = ext_;
+                }
+            }
+        }
+
+        // ── Pattern F: Mixed line "SubCode SubjectName INT EXT TOTAL MAX RESULT"
+        // e.g. "CS101  DATA STRUCTURES  22  58  80  100  PASS"
+        if (!subjectName) {
+            const patF = line.match(/^[A-Z0-9]{3,8}\s+([A-Za-z][A-Za-z\s\-\/&().,']{3,50}?)\s{2,}(\d{1,2})\s+(\d{1,3})\s+\d{1,3}\s+(\d{2,3})\s+(PASS|FAIL|P|F|AB)\b/i);
+            if (patF) {
+                subjectName = patF[1].trim();
+                internalMark = parseInt(patF[2]);
+                externalMark = parseInt(patF[3]);
+                maxMarks = parseInt(patF[4]) || 75;
+                result = patF[5].toUpperCase();
+            }
+        }
+
+        // ── Pattern G: "SubCode  INT  EXT  TOTAL  RESULT" (code only, look up subject name from prev line or next line)
+        // e.g. "CS101  22  58  80  PASS"
+        // For this, try to get name from adjacent lines
+        if (!subjectName) {
+            const patG = line.match(/^([A-Z]{1,4}\d{3,6})\s+(\d{1,2})\s+(\d{1,3})\s+\d{1,3}\s+(PASS|FAIL|P|F|AB)\b/i);
+            if (patG) {
+                // Try to get subject name from the previous non-empty, non-skip line
+                let candidateName = patG[1]; // fallback: use code as name
+                for (let j = i - 1; j >= Math.max(0, i - 3); j--) {
+                    const prev = lines[j].trim();
+                    if (prev && !skipKeywords.test(prev) && /^[A-Za-z]/.test(prev) && prev.length > 3 && !/\d{2,}/.test(prev)) {
+                        candidateName = prev;
+                        break;
+                    }
+                }
+                subjectName = candidateName;
+                internalMark = parseInt(patG[2]);
+                externalMark = parseInt(patG[3]);
+                result = patG[4].toUpperCase();
+            }
+        }
+
+        // ── Validate & Push ──
+        if (subjectName && externalMark !== null && !isNaN(externalMark)) {
+            // Filter out obvious non-subject lines
+            const cleanName = subjectName.replace(/[^A-Za-z\s\-\/&().,']/g, '').trim();
+            if (cleanName.length < 3) continue;
+            if (/^(pass|fail|total|grand|max|min|obtained|result|marks|theory|practical)$/i.test(cleanName)) continue;
+
+            // Determine paper type
+            if (/practical|lab|project|viva|workshop/i.test(cleanName)) {
+                paperType = 'PRACTICAL';
+            } else if (/allied|elective|open course|generic/i.test(cleanName)) {
+                paperType = 'ALLIED';
+            }
+
+            // Use result to determine max marks if not explicitly extracted
+            if (maxMarks <= 0) maxMarks = 75;
+
             data.subjects.push({
-                name: pattern2[1].trim(),
-                paper_type: 'CORE',
-                overall_max_marks: 75,
-                internal_marks: 0,
-                mark: parseInt(pattern2[2])
+                name: cleanName,
+                paper_type: paperType,
+                overall_max_marks: maxMarks > 25 ? maxMarks - 25 : maxMarks, // store external max
+                internal_marks: isNaN(internalMark) ? 0 : internalMark,
+                mark: externalMark,
+                result: result || ((internalMark + externalMark) >= ((maxMarks) * 0.4) ? 'PASS' : 'FAIL')
             });
         }
     }
 
+    console.log(`Parsed: name="${data.name}", regNo="${data.regNo}", subjects=${data.subjects.length}`);
     return data;
 }
 
