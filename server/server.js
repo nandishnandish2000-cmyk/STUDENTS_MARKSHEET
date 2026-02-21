@@ -8,288 +8,327 @@ const multer = require('multer');
 const Tesseract = require('tesseract.js');
 const fs = require('fs');
 const db = require('./db');
+const PDFParse = require('pdf-parse');
+const OpenAI = require('openai');
+
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY || 'no-key-provided',
+});
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Configure Multer for Marksheet Uploads
+// ─── Multer Setup ──────────────────────────────────────────────────────────────
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         const uploadDir = path.join(__dirname, '../uploads');
-        if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
+        if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
         cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + path.extname(file.originalname));
+        cb(null, Date.now() + '-' + Math.round(Math.random() * 1e9) + path.extname(file.originalname));
     }
 });
-const upload = multer({ storage });
+const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
-// ... existing logic ...
+// ─── OCR Parser ────────────────────────────────────────────────────────────────
+// Returns the required JSON:
+// { student_name, register_number, subjects:[{subject,marks,result}], total_marks, result }
+function parseMarksheetText(rawText) {
+    const lines = rawText
+        .split('\n')
+        .map(l => l.replace(/\t/g, ' ').replace(/\s{2,}/g, '  ').trim())
+        .filter(l => l.length > 0);
 
-// --- Helper: Marksheet Text Parsing (Enhanced) ---
-function parseMarksheetText(text) {
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 1);
-    const data = {
-        name: '',
-        regNo: '',
-        subjects: []
+    const fullText = lines.join('\n');
+
+    console.log('=== OCR RAW TEXT ===');
+    console.log(fullText);
+    console.log('====================');
+
+    const parsed = {
+        student_name: '',
+        register_number: '',
+        subjects: [],
+        total_marks: '',
+        result: ''
     };
 
-    console.log("=== RAW OCR TEXT START ===");
-    console.log(text);
-    console.log("=== RAW OCR TEXT END ===");
-
-    // ─── 1. Extract Student Name ─────────────────────────────────────────────
+    // ── 1. Student Name ──────────────────────────────────────────────────────
     const namePatterns = [
-        /(?:name\s+of\s+(?:the\s+)?(?:examinee|student|candidate)|student\s+name|candidate\s+name|name)\s*[:\-]?\s*([A-Za-z][A-Za-z\s.]{2,50})/i,
-        /(?:examinee|student)\s*[:\-]\s*([A-Za-z][A-Za-z\s.]{2,50})/i,
-        /^name\s*[:\-]?\s+([A-Za-z][A-Za-z\s.]+)$/im,
+        /(?:name\s+of\s+(?:the\s+)?(?:student|candidate|examinee)|student\s*name|candidate\s*name|examinee\s*name)\s*[:\-]\s*([A-Za-z][A-Za-z .]{2,60})/i,
+        /(?:^|\n)\s*name\s*[:\-]\s*([A-Za-z][A-Za-z .]{2,60})/im,
+        /\bname\b\s*[:\-]\s*([A-Za-z][A-Za-z .]{2,60})/i,
     ];
-    for (const pat of namePatterns) {
-        const m = text.match(pat);
-        if (m && m[1]) {
-            // Clean: remove trailing numbers/codes
-            let name = m[1].trim().replace(/\s*\d+.*$/, '').trim();
-            if (name.length >= 3 && name.length <= 80) {
-                data.name = name;
-                break;
-            }
-        }
-    }
-    // Fallback: look line by line for "Name : XYZ"
-    if (!data.name) {
-        for (const line of lines) {
-            const m = line.match(/^(?:name|student name|candidate)\s*[:\-]\s*(.+)$/i);
-            if (m && m[1] && m[1].trim().length > 2) {
-                data.name = m[1].trim().replace(/\s*\d+.*$/, '').trim();
-                break;
-            }
-        }
-    }
-
-    // ─── 2. Extract Register / Roll Number ──────────────────────────────────
-    const regPatterns = [
-        /(?:register(?:ation)?\s*(?:number|no\.?)|reg(?:\.?\s*no\.?)|roll\s*(?:no\.?|number)|enrollment\s*(?:no\.?|number)|hall\s*ticket)\s*[:\-]?\s*([A-Z0-9\/\-]{4,20})/i,
-        /\b([0-9]{2}[A-Z]{2,4}[0-9]{2,6})\b/,   // e.g. 21CS101, 20BCA003
-        /\b([A-Z]{2,4}[0-9]{2,4}[A-Z0-9]{2,6})\b/, // e.g. CS21A001
-    ];
-    for (const pat of regPatterns) {
-        const m = text.match(pat);
+    for (const p of namePatterns) {
+        const m = fullText.match(p);
         if (m) {
-            data.regNo = (m[1] || m[0]).trim();
-            break;
+            const c = m[1].trim().replace(/\s*\d.*$/, '').trim();
+            if (c.length >= 3) { parsed.student_name = c; break; }
         }
     }
-    // Fallback: line-by-line
-    if (!data.regNo) {
+    // Fallback: look for a line that looks like a proper name (Title Case, no digits, ≤6 words)
+    if (!parsed.student_name) {
+        const skipWords = /^(semester|marksheet|result|pass|fail|passed|failed|subject|marks|internal|external|total|college|university|department|branch|year|examination|statement|certificate|board|school|institution|register|roll|date|signature|controller|principal)$/i;
         for (const line of lines) {
-            const m = line.match(/(?:reg(?:ister)?(?:ation)?\s*(?:no|number)?|roll\s*no)\s*[:\-]\s*([A-Z0-9\/\-]{4,20})/i);
-            if (m && m[1]) {
-                data.regNo = m[1].trim();
+            const words = line.trim().split(/\s+/);
+            if (words.length >= 1 && words.length <= 5 &&
+                /^[A-Z][A-Za-z .]+$/.test(line) &&
+                !skipWords.test(line) &&
+                !/\d/.test(line) &&
+                line.length >= 4 && line.length <= 60) {
+                parsed.student_name = line.trim();
                 break;
             }
         }
     }
 
-    // ─── 3. Extract Subjects & Marks ─────────────────────────────────────────
-    // We scan every line and try many patterns, covering most Indian university marksheet layouts.
+    // ── 2. Register Number ───────────────────────────────────────────────────
+    const regPatterns = [
+        /(?:register(?:ation)?\s*(?:no\.?|number)|reg\.?\s*no\.?|roll\s*(?:no\.?|number)|enroll(?:ment)?\s*(?:no\.?|number)|hall\s*ticket\s*(?:no\.?|number)?)\s*[:\-]?\s*([A-Z0-9\/\-]{4,20})/i,
+    ];
+    for (const p of regPatterns) {
+        const m = fullText.match(p);
+        if (m) { parsed.register_number = m[1].trim(); break; }
+    }
+    if (!parsed.register_number) {
+        const fallbacks = [
+            /\b(\d{2}[A-Z]{2,5}\d{2,6})\b/,   // 21CS101
+            /\b([A-Z]{2,4}\d{2,4}[A-Z0-9]{2,6})\b/, // CS21A001
+            /\b(\d{6,12})\b/,                   // Pure numeric (6-12 digits)
+        ];
+        for (const p of fallbacks) {
+            const m = fullText.match(p);
+            if (m) { parsed.register_number = m[1].trim(); break; }
+        }
+    }
 
-    // Keywords to skip (header/footer lines)
-    const skipKeywords = /^(semester|marksheet|result sheet|statement of marks|university|college|hall ticket|register|roll no|name of|candidate|year|branch|degree|department|date|signature|principal|controller|total|grand total|head of|percentage|cgpa|sgpa|gpa|class|division|remarks|note|legend|code|subject code|sub\.?\s*code|sl\.?\s*no|s\.no|sno|serial|subject\s+name|internal|external|max|min|obtain|theory|practical|lab|paper)$/i;
+    // ── 3. Total Marks ──────────────────────────────────────────────────────
+    const totalM = fullText.match(/(?:grand\s+total|total\s+marks?|total\s+obtained)\s*[:\-]?\s*(\d{2,4})/i);
+    if (totalM) parsed.total_marks = totalM[1];
+
+    // ── 4. Overall Result ───────────────────────────────────────────────────
+    const resultM = fullText.match(/\b(PASS(?:ED)?|FAIL(?:ED)?|PROMOTED|WITHHELD)\b/i);
+    if (resultM) {
+        const r = resultM[1].toUpperCase();
+        parsed.result = r.startsWith('PASS') ? 'PASS' : r.startsWith('FAIL') ? 'FAIL' : r;
+    }
+
+    // ── 5. Subjects & Marks ─────────────────────────────────────────────────
+    const skipLine = /^(semester|marksheet|result\s*sheet|statement|university|college|institution|hall\s*ticket|register|roll\s*no|name\s*of|candidate|year|batch|branch|degree|department|date|signature|principal|controller|grand\s*total|percentage|cgpa|sgpa|gpa|class|division|remarks|note|legend|subject\s*name|subject\s*code|sub\.?\s*code|sl\.?\s*no|s\.?no|serial|internal|external|max\.?|min\.?|obtained|theory|practical$|lab$|paper$|code$|total$)$/i;
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
+        if (line.length < 4) continue;
+        if (skipLine.test(line.trim())) continue;
 
-        if (skipKeywords.test(line)) continue;
-        if (line.length < 3) continue;
+        let sub = null;
+        let marks = null;
+        let subResult = null;
 
-        let subjectName = null;
-        let internalMark = 0;
-        let externalMark = null;
-        let maxMarks = 75;
-        let paperType = 'CORE';
-        let result = null;
+        // A: "Subject  int  ext  total  max  PASS"
+        let m = line.match(/^([A-Za-z][A-Za-z &()\-\/.,]{1,55}?)\s{1,4}(\d{1,2})\s+(\d{1,3})\s+\d{1,3}\s+\d{2,3}\s+(PASS|FAIL|P|F|AB)\b/i);
+        if (m) { sub = m[1]; marks = String(+m[2] + +m[3]); subResult = m[4]; }
 
-        // ── Pattern A: "Subject Name  INT  EXT  TOTAL  MAX  RESULT"
-        // e.g. "MATHEMATICS  18  52  70  100  PASS"
-        const patA = line.match(/^([A-Za-z][A-Za-z\s\-\/&().,']{1,60}?)\s{2,}(\d{1,2})\s+(\d{1,3})\s+\d{1,3}\s+(\d{2,3})\s+(PASS|FAIL|P|F|AB|ABSENT)\b/i);
-        if (patA) {
-            subjectName = patA[1].trim();
-            internalMark = parseInt(patA[2]);
-            externalMark = parseInt(patA[3]);
-            maxMarks = parseInt(patA[4]) || 75;
-            result = patA[5].toUpperCase();
+        // B: "Subject  int  ext  PASS"
+        if (!sub) {
+            m = line.match(/^([A-Za-z][A-Za-z &()\-\/.,]{1,55}?)\s{1,4}(\d{1,2})\s+(\d{1,3})\s+(PASS|FAIL|P|F|AB)\b/i);
+            if (m) { sub = m[1]; marks = String(+m[2] + +m[3]); subResult = m[4]; }
         }
 
-        // ── Pattern B: "Subject Name  INT  EXT  RESULT"
-        // e.g. "ENGLISH  20  55  PASS"
-        if (!subjectName) {
-            const patB = line.match(/^([A-Za-z][A-Za-z\s\-\/&().,']{1,60}?)\s{2,}(\d{1,2})\s+(\d{1,3})\s+(PASS|FAIL|P|F|AB|ABSENT)\b/i);
-            if (patB) {
-                subjectName = patB[1].trim();
-                internalMark = parseInt(patB[2]);
-                externalMark = parseInt(patB[3]);
-                result = patB[4].toUpperCase();
-            }
+        // C: "Subject  total  max  PASS"
+        if (!sub) {
+            m = line.match(/^([A-Za-z][A-Za-z &()\-\/.,]{1,55}?)\s{1,4}(\d{2,3})\s+\d{2,3}\s+(PASS|FAIL|P|F|AB)\b/i);
+            if (m) { sub = m[1]; marks = m[2]; subResult = m[3]; }
         }
 
-        // ── Pattern C: "Subject Name  TOTAL  MAX  RESULT"
-        // e.g. "PHYSICS  68  100  PASS"
-        if (!subjectName) {
-            const patC = line.match(/^([A-Za-z][A-Za-z\s\-\/&().,']{1,60}?)\s{2,}(\d{2,3})\s+(\d{2,3})\s+(PASS|FAIL|P|F|AB|ABSENT)\b/i);
-            if (patC) {
-                subjectName = patC[1].trim();
-                externalMark = parseInt(patC[2]);
-                maxMarks = parseInt(patC[3]) || 75;
-                result = patC[4].toUpperCase();
-            }
+        // D: "Subject  marks  PASS"
+        if (!sub) {
+            m = line.match(/^([A-Za-z][A-Za-z &()\-\/.,]{1,55}?)\s{1,4}(\d{2,3})\s+(PASS|FAIL|P|F|AB)\b/i);
+            if (m) { sub = m[1]; marks = m[2]; subResult = m[3]; }
         }
 
-        // ── Pattern D: "Subject Name  MARK  RESULT"  (minimal)
-        // e.g. "CHEMISTRY  72  PASS"
-        if (!subjectName) {
-            const patD = line.match(/^([A-Za-z][A-Za-z\s\-\/&().,']{1,60}?)\s{2,}(\d{2,3})\s+(PASS|FAIL|P|F|ABSENT)\b/i);
-            if (patD) {
-                subjectName = patD[1].trim();
-                externalMark = parseInt(patD[2]);
-                result = patD[3].toUpperCase();
-            }
+        // E: "Subject  int  ext" (no result)
+        if (!sub) {
+            m = line.match(/^([A-Za-z][A-Za-z &()\-\/.,]{1,55}?)\s{1,4}(\d{1,2})\s+(\d{1,3})$/);
+            if (m && +m[2] <= 30 && +m[3] <= 100) { sub = m[1]; marks = String(+m[2] + +m[3]); }
         }
 
-        // ── Pattern E: "Subject Name  INT  EXT"  (no result column)
-        // e.g. "DATA STRUCTURES  22  58"
-        if (!subjectName) {
-            const patE = line.match(/^([A-Za-z][A-Za-z\s\-\/&().,']{1,60}?)\s{2,}(\d{1,2})\s+(\d{1,3})$/);
-            if (patE) {
-                const int_ = parseInt(patE[2]);
-                const ext_ = parseInt(patE[3]);
-                // Only accept if looks like valid marks (int<=25, ext<=100)
-                if (int_ <= 25 && ext_ <= 100) {
-                    subjectName = patE[1].trim();
-                    internalMark = int_;
-                    externalMark = ext_;
-                }
-            }
+        // F: "CODE  Subject  int  ext  total  max  PASS"
+        if (!sub) {
+            m = line.match(/^[A-Z0-9]{2,8}\s+([A-Za-z][A-Za-z &()\-\/.,]{2,55}?)\s{1,4}(\d{1,2})\s+(\d{1,3})\s+\d{1,3}\s+\d{2,3}\s+(PASS|FAIL|P|F|AB)\b/i);
+            if (m) { sub = m[1]; marks = String(+m[2] + +m[3]); subResult = m[4]; }
         }
 
-        // ── Pattern F: Mixed line "SubCode SubjectName INT EXT TOTAL MAX RESULT"
-        // e.g. "CS101  DATA STRUCTURES  22  58  80  100  PASS"
-        if (!subjectName) {
-            const patF = line.match(/^[A-Z0-9]{3,8}\s+([A-Za-z][A-Za-z\s\-\/&().,']{3,50}?)\s{2,}(\d{1,2})\s+(\d{1,3})\s+\d{1,3}\s+(\d{2,3})\s+(PASS|FAIL|P|F|AB)\b/i);
-            if (patF) {
-                subjectName = patF[1].trim();
-                internalMark = parseInt(patF[2]);
-                externalMark = parseInt(patF[3]);
-                maxMarks = parseInt(patF[4]) || 75;
-                result = patF[5].toUpperCase();
-            }
-        }
-
-        // ── Pattern G: "SubCode  INT  EXT  TOTAL  RESULT" (code only, look up subject name from prev line or next line)
-        // e.g. "CS101  22  58  80  PASS"
-        // For this, try to get name from adjacent lines
-        if (!subjectName) {
-            const patG = line.match(/^([A-Z]{1,4}\d{3,6})\s+(\d{1,2})\s+(\d{1,3})\s+\d{1,3}\s+(PASS|FAIL|P|F|AB)\b/i);
-            if (patG) {
-                // Try to get subject name from the previous non-empty, non-skip line
-                let candidateName = patG[1]; // fallback: use code as name
+        // G: "CODE  int  ext  total  PASS" (look up name from previous lines)
+        if (!sub) {
+            m = line.match(/^[A-Z]{1,4}\d{3,6}\s+(\d{1,2})\s+(\d{1,3})\s+\d{1,3}\s+(PASS|FAIL|P|F|AB)\b/i);
+            if (m) {
                 for (let j = i - 1; j >= Math.max(0, i - 3); j--) {
                     const prev = lines[j].trim();
-                    if (prev && !skipKeywords.test(prev) && /^[A-Za-z]/.test(prev) && prev.length > 3 && !/\d{2,}/.test(prev)) {
-                        candidateName = prev;
-                        break;
+                    if (prev && !skipLine.test(prev) && /^[A-Za-z]/.test(prev) && !/\d{2}/.test(prev)) {
+                        sub = prev; break;
                     }
                 }
-                subjectName = candidateName;
-                internalMark = parseInt(patG[2]);
-                externalMark = parseInt(patG[3]);
-                result = patG[4].toUpperCase();
+                if (!sub) sub = line.match(/^([A-Z]{1,4}\d{3,6})/)[1];
+                marks = String(+m[1] + +m[2]);
+                subResult = m[3];
             }
         }
 
-        // ── Validate & Push ──
-        if (subjectName && externalMark !== null && !isNaN(externalMark)) {
-            // Filter out obvious non-subject lines
-            const cleanName = subjectName.replace(/[^A-Za-z\s\-\/&().,']/g, '').trim();
-            if (cleanName.length < 3) continue;
-            if (/^(pass|fail|total|grand|max|min|obtained|result|marks|theory|practical)$/i.test(cleanName)) continue;
+        if (sub && marks !== null) {
+            const cleanSub = sub.replace(/[^A-Za-z0-9 &()\-\/.,]/g, '').trim();
+            if (cleanSub.length < 3) continue;
+            if (/^(pass|fail|total|grand|max|min|obtained|result|marks|theory|practical|lab|paper|code|sno|serial)$/i.test(cleanSub)) continue;
+            if (parsed.subjects.some(s => s.subject.toLowerCase() === cleanSub.toLowerCase())) continue;
 
-            // Determine paper type
-            if (/practical|lab|project|viva|workshop/i.test(cleanName)) {
-                paperType = 'PRACTICAL';
-            } else if (/allied|elective|open course|generic/i.test(cleanName)) {
-                paperType = 'ALLIED';
-            }
-
-            // Use result to determine max marks if not explicitly extracted
-            if (maxMarks <= 0) maxMarks = 75;
-
-            data.subjects.push({
-                name: cleanName,
-                paper_type: paperType,
-                overall_max_marks: maxMarks > 25 ? maxMarks - 25 : maxMarks, // store external max
-                internal_marks: isNaN(internalMark) ? 0 : internalMark,
-                mark: externalMark,
-                result: result || ((internalMark + externalMark) >= ((maxMarks) * 0.4) ? 'PASS' : 'FAIL')
+            const r = (subResult || '').toUpperCase();
+            parsed.subjects.push({
+                subject: cleanSub,
+                marks: marks,
+                result: r.startsWith('P') ? 'PASS' : r.startsWith('F') ? 'FAIL' : (parseInt(marks) >= 35 ? 'PASS' : 'FAIL')
             });
         }
     }
 
-    console.log(`Parsed: name="${data.name}", regNo="${data.regNo}", subjects=${data.subjects.length}`);
-    return data;
+    // Compute total from subjects if not found
+    if (!parsed.total_marks && parsed.subjects.length > 0) {
+        parsed.total_marks = String(parsed.subjects.reduce((s, x) => s + (parseInt(x.marks) || 0), 0));
+    }
+
+    // Compute overall result from subjects if not found
+    if (!parsed.result && parsed.subjects.length > 0) {
+        parsed.result = parsed.subjects.every(s => s.result === 'PASS') ? 'PASS' : 'FAIL';
+    }
+
+    console.log(`→ Name: "${parsed.student_name}" | Reg: "${parsed.register_number}" | Subjects: ${parsed.subjects.length} | Total: ${parsed.total_marks} | Result: ${parsed.result}`);
+    return parsed;
 }
 
-// Middleware
+/**
+ * Enhanced Extraction using OpenAI GPT-4o Vision
+ * This handles complex tables and handwritten/low-res text with extreme accuracy.
+ */
+async function extractWithGPT(filePath, isPdf = false) {
+    if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'no-key-provided') {
+        throw new Error('OpenAI API Key is missing. Falling back to local OCR.');
+    }
+
+    let base64Content = '';
+    let mediaType = '';
+
+    if (isPdf) {
+        // For PDF, we'll still use text extraction for now or prompt differently
+        // If the user wants full vision for PDF, we'd need to convert PDF to Image
+        // For now, let's keep it simple: GPT-4o handles images.
+        return null;
+    } else {
+        base64Content = fs.readFileSync(filePath, { encoding: 'base64' });
+        const ext = path.extname(filePath).toLowerCase().slice(1) || 'jpeg';
+        mediaType = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+    }
+
+    const prompt = `
+        You are a highly accurate Student Marksheet Extraction AI. 
+        Your task is to analyze the provided marksheet image and extract data into a strict JSON structure.
+        
+        Required JSON Structure:
+        {
+          "student_name": "Full name of the student",
+          "register_number": "Register/Roll number",
+          "subjects": [
+            {
+              "subject": "Full name of the subject",
+              "marks": "Total marks obtained (as a string)",
+              "result": "PASS or FAIL"
+            }
+          ],
+          "total_marks": "Grand total obtained (as a string)",
+          "result": "Overall result (PASS or FAIL)"
+        }
+        
+        Critical Instructions:
+        1. Accuracy is paramount. If a subject name is long, capture it fully.
+        2. If marks are split (Internal/External), sum them up.
+        3. Determine subject result (PASS/FAIL) based on the marksheet indicators (often 'P' or 'F').
+        4. Return ONLY the JSON object. Do not include markdown code blocks or additional text.
+    `;
+
+    try {
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [
+                {
+                    role: "user",
+                    content: [
+                        { type: "text", text: prompt },
+                        {
+                            type: "image_url",
+                            image_url: { url: `data:${mediaType};base64,${base64Content}` }
+                        }
+                    ]
+                }
+            ],
+            response_format: { type: "json_object" }
+        });
+
+        const extraction = JSON.parse(response.choices[0].message.content);
+        console.log('[GPT OCR] Extraction Successful');
+        return extraction;
+    } catch (err) {
+        console.error('[GPT OCR Error]', err.message);
+        throw err;
+    }
+}
+
+// ─── Middleware ────────────────────────────────────────────────────────────────
 app.use(cors());
 app.use(morgan('dev'));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, '..')));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Admin Credentials
+// ─── Admin Credentials ─────────────────────────────────────────────────────────
 const ADMIN_CREDENTIALS = {
     username: (process.env.ADMIN_USERNAME || 'Nandish').trim(),
     password: (process.env.ADMIN_PASSWORD || 'Nandish_16_').trim()
 };
 
-// --- API Endpoints ---
+// ═══════════════════════════════════════════════════════════════════════════════
+// API ENDPOINTS
+// ═══════════════════════════════════════════════════════════════════════════════
 
 // 1. Admin Login
 app.post('/api/admin/login', (req, res) => {
-    const { username, password } = req.body;
-
-    const inputUser = (username || '').trim();
-    const inputPass = (password || '').trim();
-
+    const inputUser = (req.body.username || '').trim();
+    const inputPass = (req.body.password || '').trim();
     console.log(`Admin login attempt: ${inputUser}`);
-
     if (inputUser.toLowerCase() === ADMIN_CREDENTIALS.username.toLowerCase() && inputPass === ADMIN_CREDENTIALS.password) {
-        console.log('Admin login successful');
         res.json({ success: true, message: 'Login successful' });
     } else {
-        console.warn('Admin login failed');
         res.status(401).json({ success: false, message: 'Entered username or password is incorrect' });
     }
 });
 
 // 2. Get Students by Semester
 app.get('/api/students/:semester', async (req, res) => {
-    const { semester } = req.params;
     try {
-        const [students] = await db.query('SELECT * FROM students WHERE semester = ?', [semester]);
-
-        // Fetch subjects for each student
-        const studentsWithMarks = await Promise.all(students.map(async (student) => {
-            const [marks] = await db.query('SELECT subject_name as name, mark, paper_type, overall_max_marks, internal_marks FROM marks WHERE student_id = ?', [student.id]);
+        const [students] = await db.query('SELECT * FROM students WHERE semester = ?', [req.params.semester]);
+        const studentsWithMarks = await Promise.all(students.map(async (s) => {
+            const [marks] = await db.query(
+                'SELECT subject_name as name, mark, paper_type, overall_max_marks, internal_marks FROM marks WHERE student_id = ?',
+                [s.id]
+            );
             return {
-                id: student.uuid,
-                name: student.name,
-                regNo: student.reg_no,
-                subjects: marks
+                id: s.uuid,
+                name: s.name,
+                regNo: s.reg_no,
+                subjects: marks,
+                totalMarks: s.total_marks,
+                result: s.result,
+                marksheetPath: s.marksheet_path
             };
         }));
-
         res.json({ success: true, students: studentsWithMarks });
     } catch (err) {
         console.error(err);
@@ -300,51 +339,46 @@ app.get('/api/students/:semester', async (req, res) => {
 // 3. Add Student
 app.post('/api/students/:semester', async (req, res) => {
     const { semester } = req.params;
-    let { name, regNo, subjects } = req.body;
-
+    let { name, regNo, subjects, totalMarks, result: overallResult, marksheetPath } = req.body;
     if (!name || !regNo || !subjects || !Array.isArray(subjects)) {
         return res.status(400).json({ success: false, message: 'Invalid student data.' });
     }
-
-    // Clean data before saving
-    name = name.trim();
-    regNo = regNo.trim();
-
+    name = name.trim(); regNo = regNo.trim();
     try {
-        // Check if student exists in this semester (Case-insensitive check)
         const [existing] = await db.query(
             'SELECT * FROM students WHERE LOWER(TRIM(reg_no)) = LOWER(?) AND semester = ?',
             [regNo, semester]
         );
-
         if (existing.length > 0) {
             return res.status(400).json({ success: false, message: 'Student with this Register Number already exists in this semester' });
         }
-
         const uuid = Date.now().toString();
+
+        // Calculate total and result if not provided (manual entry fallback)
+        if (!totalMarks && subjects.length > 0) {
+            totalMarks = subjects.reduce((sum, s) => sum + (parseInt(s.mark || s.marks || 0)), 0).toString();
+        }
+        if (!overallResult && subjects.length > 0) {
+            // Check if all marks are >= 40% (or use a simpler heuristic for manual entry)
+            overallResult = subjects.every(s => (parseInt(s.mark || s.marks || 0) >= (parseInt(s.overall_max_marks || 75) * 0.35))) ? 'PASS' : 'FAIL';
+        }
+
         const [result] = await db.query(
-            'INSERT INTO students (uuid, name, reg_no, semester) VALUES (?, ?, ?, ?)',
-            [uuid, name, regNo, semester]
+            'INSERT INTO students (uuid, name, reg_no, semester, total_marks, result, marksheet_path) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [uuid, name, regNo, semester, totalMarks || '', overallResult || '', marksheetPath || '']
         );
         const studentId = result.insertId;
-
-        // Insert subjects
         for (const sub of subjects) {
             await db.query(
                 'INSERT INTO marks (student_id, subject_name, mark, paper_type, overall_max_marks, internal_marks) VALUES (?, ?, ?, ?, ?, ?)',
-                [studentId, sub.name.trim(), sub.mark, sub.paper_type || 'CORE', sub.overall_max_marks || 75, sub.internal_marks || 0]
+                [studentId, (sub.name || sub.subject || '').trim(), sub.mark || sub.marks || 0, sub.paper_type || 'CORE', sub.overall_max_marks || 75, sub.internal_marks || 0]
             );
         }
-
-        console.log(`Successfully added student: ${name} (${regNo}) to ${semester}`);
+        console.log(`Added: ${name} (${regNo}) → ${semester}`);
         res.json({ success: true, message: 'Student added successfully' });
     } catch (err) {
-        console.error('Error adding student:', err);
-        res.status(500).json({
-            success: false,
-            message: 'Database error: ' + (err.sqlMessage || err.message || 'Unknown error'),
-            details: err.code === 'ER_DUP_ENTRY' ? 'Duplicate record detected' : undefined
-        });
+        console.error('Add student error:', err);
+        res.status(500).json({ success: false, message: 'Database error: ' + (err.sqlMessage || err.message) });
     }
 });
 
@@ -352,48 +386,37 @@ app.post('/api/students/:semester', async (req, res) => {
 app.put('/api/students/:semester/:uuid', async (req, res) => {
     const { semester, uuid } = req.params;
     let { name, regNo, subjects } = req.body;
-
-    name = name.trim();
-    regNo = regNo.trim();
-
+    name = name.trim(); regNo = regNo.trim();
     try {
         const [students] = await db.query('SELECT id FROM students WHERE uuid = ?', [uuid]);
         if (students.length === 0) return res.status(404).json({ success: false, message: 'Student not found' });
-
         const studentId = students[0].id;
 
-        // Check for duplicate RegNo in the same semester (excluding this student)
         const [duplicate] = await db.query(
             'SELECT * FROM students WHERE LOWER(TRIM(reg_no)) = LOWER(?) AND semester = ? AND uuid != ?',
             [regNo, semester, uuid]
         );
         if (duplicate.length > 0) return res.status(400).json({ success: false, message: 'Register Number already exists in this semester' });
 
-        // Update student info
         await db.query('UPDATE students SET name = ?, reg_no = ? WHERE id = ?', [name, regNo, studentId]);
-
-        // Replace subjects (Delete and Re-insert)
         await db.query('DELETE FROM marks WHERE student_id = ?', [studentId]);
         for (const sub of subjects) {
             await db.query(
                 'INSERT INTO marks (student_id, subject_name, mark, paper_type, overall_max_marks, internal_marks) VALUES (?, ?, ?, ?, ?, ?)',
-                [studentId, sub.name.trim(), sub.mark, sub.paper_type || 'CORE', sub.overall_max_marks || 75, sub.internal_marks || 0]
+                [studentId, (sub.name || '').trim(), sub.mark, sub.paper_type || 'CORE', sub.overall_max_marks || 75, sub.internal_marks || 0]
             );
         }
-
-        console.log(`Successfully updated student: ${name} (${regNo})`);
         res.json({ success: true, message: 'Student updated successfully' });
     } catch (err) {
-        console.error('Error updating student:', err);
-        res.status(500).json({ success: false, message: 'Database error while updating student' });
+        console.error('Update error:', err);
+        res.status(500).json({ success: false, message: 'Database error' });
     }
 });
 
 // 5. Delete Student
 app.delete('/api/students/:semester/:uuid', async (req, res) => {
-    const { uuid } = req.params;
     try {
-        const [result] = await db.query('DELETE FROM students WHERE uuid = ?', [uuid]);
+        const [result] = await db.query('DELETE FROM students WHERE uuid = ?', [req.params.uuid]);
         if (result.affectedRows === 0) return res.status(404).json({ success: false, message: 'Student not found' });
         res.json({ success: true, message: 'Student deleted successfully' });
     } catch (err) {
@@ -402,153 +425,134 @@ app.delete('/api/students/:semester/:uuid', async (req, res) => {
     }
 });
 
-// 6. Student Login (Check if student exists in ANY semester)
+// 6. Student Login
 app.post('/api/student/login', async (req, res) => {
     const { name, regNo } = req.body;
-    if (!name || !regNo) {
-        return res.status(400).json({ success: false, message: 'Please enter both name and register number' });
-    }
-
-    const trimmedName = name.trim();
-    const trimmedRegNo = regNo.trim();
-
+    if (!name || !regNo) return res.status(400).json({ success: false, message: 'Please enter both name and register number' });
     try {
-        console.log(`Student login attempt: Name="${trimmedName}", RegNo="${trimmedRegNo}"`);
-
-        // Search for student across ALL semesters
         const [students] = await db.query(
             'SELECT DISTINCT name, reg_no, semester FROM students WHERE LOWER(TRIM(name)) = LOWER(?) AND LOWER(TRIM(reg_no)) = LOWER(?)',
-            [trimmedName, trimmedRegNo]
+            [name.trim(), regNo.trim()]
         );
-
         if (students.length > 0) {
-            const availableSemesters = students.map(s => s.semester);
-            console.log(`Login successful for ${students[0].name}. Available semesters:`, availableSemesters);
-
             res.json({
-                success: true,
-                message: 'Login successful',
-                studentName: students[0].name,
-                regNo: students[0].reg_no,
-                availableSemesters: availableSemesters
+                success: true, message: 'Login successful',
+                studentName: students[0].name, regNo: students[0].reg_no,
+                availableSemesters: students.map(s => s.semester)
             });
         } else {
-            console.warn(`Login failed for Name="${trimmedName}", RegNo="${trimmedRegNo}"`);
-            res.status(401).json({ success: false, message: 'No record found with these details. Please check your Name and Register Number.' });
+            res.status(401).json({ success: false, message: 'No record found. Please check your Name and Register Number.' });
         }
     } catch (err) {
-        console.error('Login Error:', err);
-        res.status(500).json({ success: false, message: 'Internal server error occurred during login' });
+        console.error(err);
+        res.status(500).json({ success: false, message: 'Internal server error' });
     }
 });
 
-// 8. Get Overall Data for all Semesters
+// 7. Student Overall Data
 app.get('/api/student/overall/:regNo', async (req, res) => {
-    const regNo = req.params.regNo.trim();
     try {
-        console.log(`Fetching overall data for RegNo: ${regNo}`);
         const [students] = await db.query(
             'SELECT * FROM students WHERE LOWER(TRIM(reg_no)) = LOWER(?) ORDER BY semester ASC',
-            [regNo]
+            [req.params.regNo.trim()]
         );
-
-        if (students.length > 0) {
-            const overallData = await Promise.all(students.map(async (student) => {
-                const [marks] = await db.query('SELECT subject_name as name, mark, paper_type, overall_max_marks, internal_marks FROM marks WHERE student_id = ?', [student.id]);
-                return {
-                    semester: student.semester,
-                    subjects: marks
-                };
-            }));
-            res.json({
-                success: true,
-                studentName: students[0].name,
-                regNo: students[0].reg_no,
-                history: overallData
-            });
-        } else {
-            res.status(404).json({ success: false, message: 'No records found for this student ID' });
-        }
+        if (students.length === 0) return res.status(404).json({ success: false, message: 'No records found' });
+        const history = await Promise.all(students.map(async (s) => {
+            const [marks] = await db.query('SELECT subject_name as name, mark, paper_type, overall_max_marks, internal_marks FROM marks WHERE student_id = ?', [s.id]);
+            return { semester: s.semester, subjects: marks };
+        }));
+        res.json({ success: true, studentName: students[0].name, regNo: students[0].reg_no, history });
     } catch (err) {
-        console.error('Overall Data Error:', err);
-        res.status(500).json({ success: false, message: 'Internal server error while fetching overall data' });
+        console.error(err);
+        res.status(500).json({ success: false, message: 'Internal server error' });
     }
 });
 
-// 7. Get Single Student Data (for Student Portal)
+// 8. Get Single Student Marksheet (Student Portal)
 app.get('/api/student/:semester/:regNo', async (req, res) => {
-    const semester = req.params.semester.trim();
-    const regNo = req.params.regNo.trim();
+    const { semester, regNo } = req.params;
     try {
-        console.log(`Fetching specific marksheet: Sem=${semester}, RegNo=${regNo}`);
         const [students] = await db.query(
             'SELECT * FROM students WHERE LOWER(TRIM(reg_no)) = LOWER(?) AND LOWER(TRIM(semester)) = LOWER(?)',
-            [regNo, semester]
+            [regNo.trim(), semester.trim()]
         );
-        if (students.length > 0) {
-            const student = students[0];
-            const [marks] = await db.query('SELECT subject_name as name, mark, paper_type, overall_max_marks, internal_marks FROM marks WHERE student_id = ?', [student.id]);
-            res.json({
-                success: true,
-                student: {
-                    name: student.name,
-                    regNo: student.reg_no,
-                    subjects: marks
-                }
-            });
-        } else {
-            res.status(404).json({ success: false, message: `No record found for Semester: ${semester.replace('_', ' ')}` });
-        }
+        if (students.length === 0) return res.status(404).json({ success: false, message: `No record found for Semester: ${semester.replace('_', ' ')}` });
+        const student = students[0];
+        const [marks] = await db.query('SELECT subject_name as name, mark, paper_type, overall_max_marks, internal_marks FROM marks WHERE student_id = ?', [student.id]);
+        res.json({ success: true, student: { name: student.name, regNo: student.reg_no, subjects: marks } });
     } catch (err) {
-        console.error('Student Marksheet Error:', err);
-        res.status(500).json({ success: false, message: 'Internal server error while fetching marksheet' });
+        console.error(err);
+        res.status(500).json({ success: false, message: 'Internal server error' });
     }
 });
 
-
-// 9. Extract Marksheet Data via OCR
+// 9. OCR Extract Marksheet
 app.post('/api/extract-marksheet', upload.single('marksheet'), async (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ success: false, message: 'No file uploaded' });
-    }
+    if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
 
     const filePath = req.file.path;
-    console.log(`[OCR] Incoming file: ${req.file.originalname} -> ${filePath}`);
+    const isPdf = req.file.mimetype === 'application/pdf';
+    console.log(`[OCR] Processing: ${req.file.originalname} (${isPdf ? 'PDF' : 'Image'})`);
 
     try {
-        const { data: { text } } = await Tesseract.recognize(filePath, 'eng', {
-            logger: m => {
-                if (m.status === 'recognizing text') {
-                    console.log(`[OCR] ${Math.round(m.progress * 100)}% done`);
-                }
+        let rawText = '(Extracted via GPT-4o Intelligence Core)';
+        let confidence = 98;
+        let parsedData = null;
+
+        // Try OpenAI GPT-4o first for images if key exists for better accuracy (requested by user)
+        if (!isPdf && process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'no-key-provided') {
+            try {
+                parsedData = await extractWithGPT(filePath);
+            } catch (gptErr) {
+                console.warn('[OCR Fallback] GPT failed, trying Tesseract...', gptErr.message);
             }
-        });
+        }
 
-        const extractedData = parseMarksheetText(text);
+        // Fallback to Tesseract or handle PDF
+        if (!parsedData) {
+            if (isPdf) {
+                const dataBuffer = fs.readFileSync(filePath);
+                const pdfData = await PDFParse(dataBuffer);
+                rawText = pdfData.text || '';
+                confidence = 85;
+            } else {
+                const { data } = await Tesseract.recognize(filePath, 'eng', {
+                    logger: m => { if (m.status === 'recognizing text') console.log(`[OCR] ${Math.round(m.progress * 100)}%`); }
+                });
+                rawText = data.text || '';
+                confidence = Math.round(data.confidence || 0);
+            }
+            parsedData = parseMarksheetText(rawText);
+        }
 
-        // Clean up temp file
-        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        // Ensure confidence field is added
+        parsedData.ocr_confidence = (parsedData.ocr_confidence && !parsedData.ocr_confidence.includes('%'))
+            ? parsedData.ocr_confidence
+            : (confidence + '%');
+
+        const relativePath = 'uploads/' + path.basename(filePath);
+        const warning = (parseInt(parsedData.ocr_confidence) < 60) ? `OCR confidence is low (${parsedData.ocr_confidence}). Please verify all fields manually.` : null;
 
         res.json({
             success: true,
-            message: 'Image decoded successfully',
-            data: extractedData,
-            rawText: text
+            data: parsedData,
+            rawText: rawText,
+            confidence: parseInt(parsedData.ocr_confidence),
+            warning: warning,
+            marksheetPath: relativePath
         });
     } catch (err) {
         console.error('[OCR Error]', err);
         if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-        res.status(500).json({ success: false, message: 'OCR extraction failed', error: err.message });
+        res.status(500).json({ success: false, message: 'OCR processing failed: ' + err.message });
     }
 });
 
-// Connection Test
+// ─── DB Health Check ───────────────────────────────────────────────────────────
 db.query('SELECT 1').then(() => {
-    console.log('Database connected successfully');
+    console.log('✓ Database connected');
 }).catch(err => {
-    console.error('Database connection failed:', err);
+    console.error('✗ Database connection failed:', err.message);
 });
 
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));

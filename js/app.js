@@ -267,7 +267,7 @@ const app = {
     loadStudentList: async () => {
         app.navigateTo('studentListPage');
         const tbody = document.getElementById('studentListBody');
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4">Loading...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">Loading...</td></tr>';
 
         try {
             const res = await fetch(`${API_BASE}/students/${app.currentSemester}`);
@@ -276,13 +276,23 @@ const app = {
             tbody.innerHTML = '';
             if (data.success && data.students.length > 0) {
                 data.students.forEach(student => {
+                    const resultClass = student.result === 'PASS' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 'text-rose-400 bg-rose-500/10 border-rose-500/20';
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td class="px-8 py-5 whitespace-nowrap text-sm text-cyan-400 font-mono tracking-wider">${student.regNo}</td>
                         <td class="px-8 py-5 whitespace-nowrap text-sm text-white font-bold tracking-wide">${student.name}</td>
-                        <td class="px-8 py-5 text-sm text-slate-400 max-w-xs truncate">${student.subjects.map(s => s.name).join(', ')}</td>
+                        <td class="px-8 py-5 text-center text-sm text-slate-400 font-mono">
+                            <span class="px-2 py-1 rounded bg-white/5 border border-white/10">${student.subjects ? student.subjects.length : '0'} Nodes</span>
+                        </td>
+                        <td class="px-8 py-5 text-center text-sm text-slate-300 font-mono">${student.totalMarks || '-'}</td>
+                        <td class="px-8 py-5 text-center whitespace-nowrap text-xs font-black">
+                            <span class="px-2 py-1 rounded border ${resultClass}">${student.result || 'N/A'}</span>
+                        </td>
                         <td class="px-8 py-5 whitespace-nowrap text-right text-sm font-bold">
-                            <button onclick="app.viewStudent('${student.id}')" class="text-cyan-400 hover:text-cyan-300 mr-5 transition-colors"><i class="fas fa-eye shadow-[0_0_10px_rgba(34,211,238,0.3)]"></i> Analysis</button>
+                            ${student.marksheetPath ? `
+                            <a href="${student.marksheetPath}" target="_blank" class="text-purple-400 hover:text-purple-300 mr-5 transition-colors"><i class="fas fa-file-alt"></i> View Marksheet</a>
+                            ` : ''}
+                            <button onclick="app.viewStudent('${student.id}')" class="text-cyan-400 hover:text-cyan-300 mr-5 transition-colors"><i class="fas fa-eye"></i> Analysis</button>
                             <button onclick="app.editStudent('${student.id}')" class="text-indigo-400 hover:text-indigo-300 mr-5 transition-colors"><i class="fas fa-edit"></i> Edit</button>
                             <button onclick="app.deleteStudent('${student.id}')" class="text-rose-400 hover:text-rose-300 transition-colors"><i class="fas fa-trash-alt"></i> Purge</button>
                         </td>
@@ -290,10 +300,10 @@ const app = {
                     tbody.appendChild(tr);
                 });
             } else {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500">No students found.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-gray-500">No students found.</td></tr>';
             }
         } catch (err) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-red-500">Error loading data.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-red-500">Error loading data.</td></tr>';
         }
     },
 
@@ -761,8 +771,8 @@ const app = {
     },
 
     _handleMarksheetFile: (file) => {
-        if (file.size > 5 * 1024 * 1024) {
-            app.showToast('File size exceeds 5MB limit', 'error');
+        if (file.size > 10 * 1024 * 1024) {
+            app.showToast('File size exceeds 10MB limit', 'error');
             return;
         }
         // Store file globally
@@ -800,18 +810,30 @@ const app = {
         document.getElementById('extractionLoader').classList.remove('hidden');
         document.getElementById('uploadStep2').classList.add('hidden');
 
-        // Animate progress bar
+        // Animate circular progress
         let pct = 5;
-        const progressBar = document.getElementById('ocrProgressBar');
+        const progressCircle = document.getElementById('ocrProgressCircle');
         const progressText = document.getElementById('ocrProgressText');
+        const percentText = document.getElementById('ocrPercentVal');
+
+        const setProgress = (percent) => {
+            if (!progressCircle) return;
+            const radius = progressCircle.r.baseVal.value;
+            const circumference = radius * 2 * Math.PI;
+            const offset = circumference - (percent / 100 * circumference);
+            progressCircle.style.strokeDasharray = `${circumference} ${circumference}`;
+            progressCircle.style.strokeDashoffset = offset;
+            if (percentText) percentText.textContent = Math.round(percent) + '%';
+        };
+
         const progressInterval = setInterval(() => {
-            pct = Math.min(pct + Math.random() * 8, 90);
-            if (progressBar) progressBar.style.width = pct + '%';
+            pct = Math.min(pct + Math.random() * 8, 92);
+            setProgress(pct);
             if (progressText) {
-                if (pct < 20) progressText.textContent = 'Loading OCR engine...';
-                else if (pct < 50) progressText.textContent = 'Detecting text regions...';
-                else if (pct < 75) progressText.textContent = 'Reading characters...';
-                else progressText.textContent = 'Parsing extracted text...';
+                if (pct < 20) progressText.textContent = 'Engaging neural OCR core...';
+                else if (pct < 50) progressText.textContent = 'Mapping data topologies...';
+                else if (pct < 75) progressText.textContent = 'Resolving matrix nodes...';
+                else progressText.textContent = 'Finalizing structural analysis...';
             }
         }, 800);
 
@@ -826,11 +848,24 @@ const app = {
             const data = await res.json();
 
             clearInterval(progressInterval);
-            if (progressBar) progressBar.style.width = '100%';
+            setProgress(100);
 
-            document.getElementById('extractionLoader').classList.add('hidden');
+            setTimeout(() => {
+                document.getElementById('extractionLoader').classList.add('hidden');
+            }, 600);
 
             if (data.success) {
+                // Update confidence metrics
+                const confPercent = data.confidence || 0;
+                document.getElementById('confidenceBar').style.width = confPercent + '%';
+                document.getElementById('confidencePercent').textContent = confPercent + '%';
+
+                // Color bar based on confidence
+                const bar = document.getElementById('confidenceBar');
+                if (confPercent < 50) bar.className = 'h-full bg-rose-500 transition-all duration-1000';
+                else if (confPercent < 75) bar.className = 'h-full bg-amber-500 transition-all duration-1000';
+                else bar.className = 'h-full bg-emerald-500 transition-all duration-1000';
+
                 // Show image in step 2
                 const previewImg = document.getElementById('uploadedMarksheetPreview');
                 if (previewImg && app._currentMarksheetDataUrl) {
@@ -839,6 +874,18 @@ const app = {
                 // Show raw OCR text
                 const rawEl = document.getElementById('rawOcrText');
                 if (rawEl) rawEl.textContent = data.rawText || '(No text extracted)';
+
+                // Show OCR confidence warning if low
+                const warn = document.getElementById('lowConfidenceWarning');
+                const warnText = document.getElementById('lowConfidenceText');
+                if (data.warning && warn && warnText) {
+                    warnText.textContent = data.warning;
+                    warn.classList.remove('hidden');
+                } else if (warn) {
+                    warn.classList.add('hidden');
+                }
+
+                app._currentMarksheetRemotePath = data.marksheetPath;
 
                 app.displayExtractedData(data.data);
                 document.getElementById('uploadStep2').classList.remove('hidden');
@@ -856,8 +903,22 @@ const app = {
     },
 
     displayExtractedData: (data) => {
-        document.getElementById('extractedName').value = data.name || '';
-        document.getElementById('extractedRegNo').value = data.regNo || '';
+        // Map new server JSON keys → form fields
+        document.getElementById('extractedName').value = data.student_name || data.name || '';
+        document.getElementById('extractedRegNo').value = data.register_number || data.regNo || '';
+        document.getElementById('extractedTotalMarks').value = data.total_marks || '';
+
+        const resultSel = document.getElementById('extractedOverallResult');
+        if (resultSel) resultSel.value = data.result || '';
+
+        // Add confidence highlighting
+        const highlights = ['extractedName', 'extractedRegNo', 'extractedTotalMarks'];
+        const isLow = (data.confidence || 100) < 65;
+        highlights.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.remove('confidence-low', 'confidence-high');
+            if (el) el.classList.add(isLow ? 'confidence-low' : 'confidence-high');
+        });
 
         const container = document.getElementById('extractedSubjectsContainer');
         container.innerHTML = '';
@@ -865,16 +926,69 @@ const app = {
         const hint = document.getElementById('noSubjectsHint');
 
         if (data.subjects && data.subjects.length > 0) {
-            data.subjects.forEach(sub => app.addSubjectRow('extractedSubjectsContainer', sub));
+            data.subjects.forEach(sub => app.addExtractedSubjectRow(sub));
             if (hint) hint.classList.add('hidden');
-            const nameVal = data.name ? `\"${data.name}\"` : 'unknown';
+            const nameVal = (data.student_name || data.name) ? `"${data.student_name || data.name}"` : 'student';
             app.showToast(`Extracted ${data.subjects.length} subject(s) for ${nameVal}`, 'success');
         } else {
-            // Show hint to fill manually
-            app.addSubjectRow('extractedSubjectsContainer');
+            app.addExtractedSubjectRow();
             if (hint) hint.classList.remove('hidden');
-            app.showToast('No subjects auto-detected — check raw text and fill manually', 'info');
+            app.showToast('No subjects auto-detected — check raw OCR text and fill manually', 'info');
         }
+    },
+
+    // Simplified 3-column subject row for OCR upload context
+    addExtractedSubjectRow: (initialData = null) => {
+        const container = document.getElementById('extractedSubjectsContainer');
+        if (!container) return;
+
+        const subjectName = (initialData && (initialData.subject || initialData.name)) ? (initialData.subject || initialData.name) : '';
+        const marks = (initialData && (initialData.marks !== undefined || initialData.mark !== undefined))
+            ? (initialData.marks !== undefined ? initialData.marks : initialData.mark)
+            : '';
+        const result = (initialData && initialData.result) ? initialData.result : 'PASS';
+
+        const div = document.createElement('div');
+        div.className = 'grid grid-cols-[1fr_120px_120px_40px] gap-3 items-center extracted-subject-row';
+        div.innerHTML = `
+            <input type="text" placeholder="Subject name (e.g. Mathematics)"
+                class="extracted-subject-name w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all text-sm"
+                value="${subjectName}">
+            <input type="number" min="0" placeholder="Marks"
+                class="extracted-subject-marks w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all text-sm text-center font-mono font-bold"
+                value="${marks}">
+            <select class="extracted-subject-result w-full bg-slate-900 border border-slate-700 rounded-xl p-3 font-bold transition-all text-sm ${result === 'PASS' ? 'text-emerald-400' : 'text-rose-400'}"
+                onchange="this.className = 'extracted-subject-result w-full bg-slate-900 border border-slate-700 rounded-xl p-3 font-bold transition-all text-sm ' + (this.value === 'PASS' ? 'text-emerald-400' : 'text-rose-400')">
+                <option value="PASS" ${result === 'PASS' ? 'selected' : ''} style="color:#34d399">PASS</option>
+                <option value="FAIL" ${result === 'FAIL' ? 'selected' : ''} style="color:#f87171">FAIL</option>
+            </select>
+            <button type="button" onclick="this.parentElement.remove()" class="text-rose-500 hover:text-rose-400 transition flex-shrink-0">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        `;
+        container.appendChild(div);
+    },
+
+    recalculateTotal: () => {
+        const container = document.getElementById('extractedSubjectsContainer');
+        const rows = container.querySelectorAll('.extracted-subject-row');
+        let total = 0;
+        let allPass = true;
+
+        rows.forEach(row => {
+            const markInput = row.querySelector('.extracted-subject-marks');
+            const resultSelect = row.querySelector('.extracted-subject-result');
+            const val = parseInt(markInput.value || 0);
+            total += val;
+            if (resultSelect && resultSelect.value === 'FAIL') allPass = false;
+        });
+
+        document.getElementById('extractedTotalMarks').value = total;
+        const resultSel = document.getElementById('extractedOverallResult');
+        if (resultSel && !resultSel.value) {
+            resultSel.value = allPass ? 'PASS' : 'FAIL';
+        }
+        app.showToast(`Recalculated: Total sum is ${total}`, 'info');
     },
 
     cancelUpload: () => {
@@ -893,41 +1007,72 @@ const app = {
     saveExtractedData: async () => {
         const name = document.getElementById('extractedName').value.trim();
         const regNo = document.getElementById('extractedRegNo').value.trim();
-        const subjects = app.collectSubjects('extractedSubjectsContainer');
 
         if (!name || !regNo) {
-            app.showToast('Name and Register Number are required', 'error');
+            app.showToast('Student Name and Register Number are required', 'error');
             return;
         }
 
-        if (!subjects || subjects.length === 0) {
-            if (subjects !== null) app.showToast('Please add at least one subject', 'error');
-            return;
-        }
+        // Collect rows from the simplified extracted subject rows
+        const container = document.getElementById('extractedSubjectsContainer');
+        const rows = container.querySelectorAll('.extracted-subject-row');
+        const subjects = [];
+        let rowError = null;
+
+        rows.forEach(row => {
+            if (rowError) return;
+            const subjectName = (row.querySelector('.extracted-subject-name').value || '').trim();
+            const marks = row.querySelector('.extracted-subject-marks').value;
+            const result = row.querySelector('.extracted-subject-result').value;
+
+            if (!subjectName) { rowError = 'Subject name cannot be empty'; return; }
+            if (marks === '' || isNaN(parseInt(marks))) { rowError = `Marks for "${subjectName}" must be a valid number`; return; }
+
+            // Map to the format the server/DB expects
+            subjects.push({
+                name: subjectName,
+                mark: parseInt(marks),
+                paper_type: 'CORE',
+                overall_max_marks: 100,
+                internal_marks: 0,
+                result
+            });
+        });
+
+        if (rowError) { app.showToast(rowError, 'error'); return; }
+        if (subjects.length === 0) { app.showToast('Please add at least one subject row', 'error'); return; }
+
+        const totalMarks = document.getElementById('extractedTotalMarks').value.trim();
+        const overallResult = document.getElementById('extractedOverallResult').value;
+        const marksheetPath = app._currentMarksheetRemotePath || '';
 
         try {
-            console.log(`Committing extracted data to ${app.currentSemester}...`);
+            console.log(`Saving to semester: ${app.currentSemester}, ${subjects.length} subjects`);
             const res = await fetch(`${API_BASE}/students/${app.currentSemester}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, regNo, subjects })
+                body: JSON.stringify({ name, regNo, subjects, totalMarks, result: overallResult, marksheetPath })
             });
             const data = await res.json();
 
             if (data.success) {
-                app.showToast('Data committed to registry', 'success');
+                app.showToast('✅ Student record saved to database!', 'success');
                 app.loadStudentList();
-                // Reset upload state
+                // Reset UI
                 document.getElementById('uploadStep2').classList.add('hidden');
                 document.getElementById('uploadStep1').classList.remove('hidden');
                 document.getElementById('marksheetFile').value = '';
                 document.getElementById('fileInfo').classList.add('hidden');
+                const wrap1 = document.getElementById('uploadImagePreview1');
+                if (wrap1) wrap1.classList.add('hidden');
+                app._currentMarksheetFile = null;
+                app._currentMarksheetDataUrl = null;
             } else {
-                app.showToast(data.message, 'error');
+                app.showToast(data.message || 'Save failed', 'error');
             }
         } catch (err) {
             console.error(err);
-            app.showToast('Registry sync failed', 'error');
+            app.showToast('Connection failed — please try again', 'error');
         }
     }
 };
