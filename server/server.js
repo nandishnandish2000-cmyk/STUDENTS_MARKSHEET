@@ -396,9 +396,10 @@ app.post('/api/students/:semester', async (req, res) => {
         );
         const studentId = result.insertId;
         for (const sub of subjects) {
+            const subjectResult = (sub.result && sub.result.trim().length > 0) ? sub.result.trim().toUpperCase() : (sub.mark >= 30 ? 'PASS' : 'FAIL');
             await db.query(
                 'INSERT INTO marks (student_id, subject_name, mark, paper_type, overall_max_marks, internal_marks, result) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                [studentId, (sub.name || sub.subject || '').trim(), sub.mark || sub.marks || 0, sub.paper_type || 'CORE', sub.overall_max_marks || 75, sub.internal_marks || 0, sub.result || 'PASS']
+                [studentId, (sub.name || sub.subject || '').trim(), sub.mark || sub.marks || 0, sub.paper_type || 'CORE', sub.overall_max_marks || 75, sub.internal_marks || 0, subjectResult]
             );
         }
         console.log(`Added: ${name} (${regNo}) → ${semester}`);
@@ -428,9 +429,10 @@ app.put('/api/students/:semester/:uuid', async (req, res) => {
         await db.query('UPDATE students SET name = ?, reg_no = ? WHERE id = ?', [name, regNo, studentId]);
         await db.query('DELETE FROM marks WHERE student_id = ?', [studentId]);
         for (const sub of subjects) {
+            const subjectResult = (sub.result && sub.result.trim().length > 0) ? sub.result.trim().toUpperCase() : (sub.mark >= 30 ? 'PASS' : 'FAIL');
             await db.query(
                 'INSERT INTO marks (student_id, subject_name, mark, paper_type, overall_max_marks, internal_marks, result) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                [studentId, (sub.name || '').trim(), sub.mark, sub.paper_type || 'CORE', sub.overall_max_marks || 75, sub.internal_marks || 0, sub.result || 'PASS']
+                [studentId, (sub.name || '').trim(), sub.mark, sub.paper_type || 'CORE', sub.overall_max_marks || 75, sub.internal_marks || 0, subjectResult]
             );
         }
         res.json({ success: true, message: 'Student updated successfully' });

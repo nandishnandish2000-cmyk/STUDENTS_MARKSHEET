@@ -550,13 +550,18 @@ const app = {
                     const subTotal = internal + external;
                     const subMaxTotal = overallMax + 25;
 
-                    // Result Logic - ABSOLUTE DATA ADHERENCE
-                    // We ONLY show what is in the DB. No more calculations on frontend.
-                    const dbResult = (sub.result || "").trim().toUpperCase();
-                    const isPass = dbResult === "PASS" || dbResult === "P" || dbResult === "P." || dbResult.includes("PASS");
-                    const statusText = isPass ? "PASS" : "FAIL";
-                    const statusClass = isPass ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-rose-500/10 text-rose-400 border-rose-500/20";
-                    if (!isPass) hasFail = true;
+                    // Result Logic - THE FINAL NUCLEAR FIX
+                    // 1. Get raw string from DB
+                    const rawDbResult = (sub.result || "").toString().trim().toUpperCase();
+
+                    // 2. Identify if it represents a PASS (Common formats: "PASS", "P", "P.", "PASS.")
+                    const isActuallyPass = rawDbResult.includes("PASS") || rawDbResult === "P" || rawDbResult === "P.";
+
+                    // 3. Set visual labels based on the DB value
+                    const statusText = isActuallyPass ? "PASS" : "FAIL";
+                    const statusClass = isActuallyPass ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-rose-500/10 text-rose-400 border-rose-500/20";
+
+                    if (!isActuallyPass) hasFail = true;
 
                     // Calculation Logic for Overall Total: Count everything except 'NON' paper types for percentage
                     if (paperType !== 'NON') {
@@ -569,8 +574,8 @@ const app = {
                     tr.innerHTML = `
                         <td class="text-left py-5 pl-8 text-white font-bold tracking-wide text-sm whitespace-nowrap">${sub.name}</td>
                         <td class="text-left py-5 px-6">
-                            <span class="text-[9px] font-black px-2.5 py-1 rounded border ${paperType === 'CORE' ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' : (paperType === 'PRAC' || paperType === 'PRACTICAL' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-slate-500/20 text-slate-400 border-slate-500/30')} tracking-widest uppercase">
-                                ${paperType === 'NON' ? 'N-M' : (paperType === 'CORE' ? 'COR' : paperType.substring(0, 3).toUpperCase())}
+                            <span class="text-[9px] font-black px-2.5 py-1 rounded border ${paperType === 'CORE' ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' : (paperType === 'PRAC' || paperType === 'PRACTICAL' || paperType === 'PRAC' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-slate-500/20 text-slate-400 border-slate-500/30')} tracking-widest uppercase">
+                                ${paperType === 'NON' ? 'NON' : (paperType === 'CORE' ? 'COR' : paperType.substring(0, 3).toUpperCase())}
                             </span>
                         </td>
                         <td class="text-center py-5 text-slate-400 font-mono text-xs font-bold">${subMaxTotal}</td>
