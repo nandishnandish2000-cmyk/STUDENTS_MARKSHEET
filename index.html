@@ -51,10 +51,11 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            z-index: -10;
+            z-index: -5;
+            /* Behind content but high enough to be prime */
             background: #000000;
-            pointer-events: none;
-            /* Let parent handle logic or keep auto if needed */
+            pointer-events: auto !important;
+            /* ENABLE MOUSE CAPTURE */
         }
 
         #robot-spline {
@@ -99,40 +100,39 @@
         }
 
         /* Overlay Text Styles */
-        @keyframes title-glimmer {
+        @keyframes holographic-pulse {
             0% {
-                border-color: rgba(34, 211, 238, 0.2);
-                box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+                text-shadow: 0 0 10px rgba(34, 211, 238, 0.4);
+                opacity: 0.9;
             }
 
             50% {
-                border-color: rgba(34, 211, 238, 0.6);
-                box-shadow: 0 4px 30px rgba(34, 211, 238, 0.2);
+                text-shadow: 0 0 25px rgba(34, 211, 238, 0.8), 0 0 45px rgba(34, 211, 238, 0.3);
+                opacity: 1;
             }
 
             100% {
-                border-color: rgba(34, 211, 238, 0.2);
-                box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+                text-shadow: 0 0 10px rgba(34, 211, 238, 0.4);
+                opacity: 0.9;
             }
         }
 
         #portal-title {
             position: fixed;
-            top: 25px;
-            left: 25px;
-            z-index: 9999;
-            /* Force to top */
+            top: 40px;
+            left: 40px;
+            z-index: 100;
             text-align: left;
             pointer-events: none;
             opacity: 0;
-            transform: translateX(-30px);
-            transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
-            background: rgba(15, 23, 42, 0.5);
-            backdrop-filter: blur(12px);
-            padding: 18px 28px;
-            border-radius: 16px;
-            border: 1px solid rgba(34, 211, 238, 0.3);
-            animation: title-glimmer 4s infinite ease-in-out;
+            transform: translateY(-10px);
+            transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+            background: transparent;
+            /* Removed outline/badge background as requested */
+            padding: 0;
+            border: none !important;
+            /* REMOVED OUTLINE */
+            animation: holographic-pulse 3s infinite ease-in-out;
         }
 
         #portal-title.visible {
@@ -1323,7 +1323,7 @@
     </script>
 
     <!-- Original App Script -->
-    <script src="js/app.js?v=21"></script>
+    <script src="js/app.js?v=22"></script>
 
 </body>
 
