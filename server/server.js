@@ -248,9 +248,9 @@ async function extractWithGPT(filePath, isPdf = false) {
         3. Subjects Table:
            - Subject Code (e.g., 11T, 12E)
            - Subject Name (Full descriptive name)
-           - Paper Type (Look for labels in the "SUBJECT NAME" column. If it says "CORE:" or prefix is "CORE", value is "CORE". If "ALLIED:", value is "ALLIED". If "CORE PRACTICAL:", value is "PRACTICAL". If it's a language like TAMIL/ENGLISH or has no prefix, value is "CORE" or "GEN" depending on university context - for Bharathiar, keep literal prefix if found, otherwise default to CORE unless it's obviously special like Environmental Studies.)
+           - Paper Type (Look for labels in the "SUBJECT NAME" column. If it says "CORE:", value is "CORE". If "ALLIED:", value is "ALLIED". If "CORE PRACTICAL:", value is "PRACTICAL". If no label is found, the value MUST be "NON".)
            - Marks (If marks are in "INT+EXT" or "021+039" format, sum them up and return the total)
-           - Result (STRICTLY extract the character from the "RESULT" column. If it is "P." or "P", return "PASS". If it is "F." or "F", return "FAIL". DO NOT calculate this based on marks.)
+           - Result (STRICTLY extract the character from the "RESULT" column. If it is "P." or "P", return "PASS". If it is "F." or "F", return "FAIL". DO NOT perform any calculations.)
         
         Required JSON Structure:
         {
@@ -259,7 +259,7 @@ async function extractWithGPT(filePath, isPdf = false) {
           "subjects": [
             {
               "subject": "Full Subject Name (include code if helpful)",
-              "paper_type": "CORE/ALLIED/PRACTICAL/ELECTIVE",
+              "paper_type": "CORE/ALLIED/PRACTICAL/NON",
               "marks": "Total obtained (as string)",
               "result": "PASS or FAIL"
             }

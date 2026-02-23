@@ -128,7 +128,7 @@ const app = {
         div.className = 'flex flex-wrap gap-2 items-end border-b border-white/10 pb-4 mb-4 subject-row';
 
         const subjectName = (initialData && initialData.name) ? initialData.name : '';
-        const paperType = (initialData && initialData.paper_type) ? initialData.paper_type : 'CORE';
+        const paperType = (initialData && initialData.paper_type) ? initialData.paper_type : 'NON';
         const overallMax = (initialData && initialData.overall_max_marks) ? initialData.overall_max_marks : 75;
         const internal = (initialData && initialData.internal_marks !== undefined) ? initialData.internal_marks : 0;
         const mark = (initialData && initialData.mark !== undefined) ? initialData.mark : '';
@@ -550,17 +550,17 @@ const app = {
                     const subTotal = internal + external;
                     const subMaxTotal = overallMax + 25;
 
-                    // Result Logic - Strictly use data from DB
-                    const resultText = sub.result || (subTotal >= (subMaxTotal * 0.40) ? 'PASS' : 'FAIL');
-                    const isPass = resultText === 'PASS';
+                    // Result Logic - STRICTLY use data from DB to avoid mismatch
+                    const resultText = (sub.result && sub.result.length > 0) ? sub.result : (subTotal >= (subMaxTotal * 0.40) ? 'PASS' : 'FAIL');
+                    const isPass = resultText.toUpperCase().includes('PASS');
                     const resultClass = isPass ? 'text-emerald-400' : 'text-rose-400';
                     if (!isPass) hasFail = true;
 
-                    // Calculation Logic: Count everything for total unless explicitly ignored, 
-                    // but for Bharathiar, usually TAMIL/ENGLISH/CORE/ALLIED all count.
-                    // If paperType is 'GEN' or 'NME', it might be excluded.
-                    totalObtained += subTotal;
-                    totalMax += subMaxTotal;
+                    // Calculation Logic: Percentage based on CORE + ALLIED + PRAC
+                    if (paperType !== 'NON') {
+                        totalObtained += subTotal;
+                        totalMax += subMaxTotal;
+                    }
 
                     const tr = document.createElement('tr');
                     tr.className = 'border-b border-gray-100';
@@ -958,7 +958,7 @@ const app = {
             ? (initialData.marks !== undefined ? initialData.marks : initialData.mark)
             : '';
         const result = (initialData && initialData.result) ? initialData.result : 'PASS';
-        const paperType = (initialData && (initialData.paper_type || initialData.paperType)) ? (initialData.paper_type || initialData.paperType).toUpperCase() : 'CORE';
+        const paperType = (initialData && (initialData.paper_type || initialData.paperType)) ? (initialData.paper_type || initialData.paperType).toUpperCase() : 'NON';
 
         const div = document.createElement('div');
         div.className = 'grid grid-cols-[1fr_100px_100px_100px_40px] gap-3 items-center extracted-subject-row mb-3';
@@ -971,8 +971,7 @@ const app = {
                 <option value="CORE" ${paperType === 'CORE' ? 'selected' : ''}>CORE</option>
                 <option value="ALLIED" ${paperType === 'ALLIED' ? 'selected' : ''}>ALLIED</option>
                 <option value="PRACTICAL" ${paperType === 'PRACTICAL' ? 'selected' : ''}>PRAC</option>
-                <option value="ELECTIVE" ${paperType === 'ELECTIVE' ? 'selected' : ''}>ELEC</option>
-                <option value="NON-MAJOR" ${paperType === 'NON-MAJOR' ? 'selected' : ''}>NME</option>
+                <option value="NON" ${paperType === 'NON' ? 'selected' : ''}>NON</option>
             </select>
 
             <input type="number" min="0" placeholder="Marks"
