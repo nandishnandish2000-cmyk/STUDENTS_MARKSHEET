@@ -550,30 +550,38 @@ const app = {
                     const subTotal = internal + external;
                     const subMaxTotal = overallMax + 25;
 
-                    // Result Logic - STRICTLY use data from DB to avoid mismatch
-                    // Normalize the input from DB (it might be "PASS", "P", "PASS.", etc.)
-                    const rawResult = (sub.result || "").toUpperCase().trim();
-                    const isPass = rawResult.includes("PASS") || rawResult === "P" || rawResult === "P.";
-                    const resultText = isPass ? "PASS" : "FAIL";
-                    const resultClass = isPass ? 'text-emerald-400' : 'text-rose-400';
+                    // Result Logic - ABSOLUTE DATA ADHERENCE
+                    // We ONLY show what is in the DB. No more calculations on frontend.
+                    const dbResult = (sub.result || "").trim().toUpperCase();
+                    const isPass = dbResult === "PASS" || dbResult === "P" || dbResult === "P." || dbResult.includes("PASS");
+                    const statusText = isPass ? "PASS" : "FAIL";
+                    const statusClass = isPass ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-rose-500/10 text-rose-400 border-rose-500/20";
                     if (!isPass) hasFail = true;
 
-                    // Calculation Logic: Percentage based on CORE + ALLIED + PRAC
+                    // Calculation Logic for Overall Total: Count everything except 'NON' paper types for percentage
                     if (paperType !== 'NON') {
                         totalObtained += subTotal;
                         totalMax += subMaxTotal;
                     }
 
                     const tr = document.createElement('tr');
-                    tr.className = 'border-b border-gray-100';
+                    tr.className = 'border-b border-white/5 hover:bg-white/[0.02] transition-colors';
                     tr.innerHTML = `
-                        <td class="text-left py-4 pl-6 text-white font-bold tracking-wide">${sub.name}</td>
-                        <td class="text-left py-4 px-6"><span class="text-[10px] font-bold px-3 py-1 rounded-lg border ${paperType === 'CORE' ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' : 'bg-slate-500/20 text-slate-300 border-slate-500/30'}">${paperType}</span></td>
-                        <td class="text-center py-4 text-slate-500 font-mono">${subMaxTotal}</td>
-                        <td class="text-center py-4 text-slate-300 font-mono">${internal}</td>
-                        <td class="text-center py-4 text-slate-300 font-mono">${external}</td>
-                        <td class="text-center py-4 font-black text-white font-mono">${subTotal}</td>
-                         <td class="text-center py-4 font-black ${resultClass} tracking-widest">${resultText}</td>
+                        <td class="text-left py-5 pl-8 text-white font-bold tracking-wide text-sm whitespace-nowrap">${sub.name}</td>
+                        <td class="text-left py-5 px-6">
+                            <span class="text-[9px] font-black px-2.5 py-1 rounded border ${paperType === 'CORE' ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' : (paperType === 'PRAC' || paperType === 'PRACTICAL' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-slate-500/20 text-slate-400 border-slate-500/30')} tracking-widest uppercase">
+                                ${paperType === 'NON' ? 'N-M' : (paperType === 'CORE' ? 'COR' : paperType.substring(0, 3).toUpperCase())}
+                            </span>
+                        </td>
+                        <td class="text-center py-5 text-slate-400 font-mono text-xs font-bold">${subMaxTotal}</td>
+                        <td class="text-center py-5 text-slate-300 font-mono text-sm">${internal}</td>
+                        <td class="text-center py-5 text-slate-300 font-mono text-sm">${external}</td>
+                        <td class="text-center py-5 font-black text-white font-mono text-base">${subTotal}</td>
+                        <td class="text-center py-5 pr-8">
+                            <span class="inline-block px-4 py-1.5 rounded-lg border font-black text-[10px] tracking-[0.2em] shadow-lg ${statusClass}">
+                                ${statusText}
+                            </span>
+                        </td>
                     `;
                     tbody.appendChild(tr);
                 });
