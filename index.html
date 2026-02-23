@@ -51,14 +51,10 @@
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 1;
-            /* Above body, below main */
+            z-index: -1;
+            /* Behind everything */
             background: #000000;
-            opacity: 1;
-            visibility: visible;
-            transition: opacity 1.5s ease-in-out;
             pointer-events: auto !important;
-            /* Allow interaction with robot */
         }
 
 
@@ -168,18 +164,18 @@
         }
 
         /* Glassmorphism for cards to show background */
-        /* Compact Horizontal Modules at Bottom */
+        /* Ultra-Compact Modules */
         .compact-module {
-            background: rgba(15, 23, 42, 0.4) !important;
-            backdrop-filter: blur(16px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.08) !important;
-            padding: 16px 24px !important;
-            border-radius: 16px !important;
+            background: rgba(15, 23, 42, 0.5) !important;
+            backdrop-filter: blur(12px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            padding: 10px 16px !important;
+            border-radius: 12px !important;
             display: flex;
             align-items: center;
-            gap: 16px;
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            min-width: 280px;
+            gap: 12px;
+            transition: all 0.3s ease;
+            min-width: 180px;
             opacity: 0;
             transform: translateY(20px);
         }
@@ -355,31 +351,30 @@
 
         <!-- 1. HOME PAGE -->
         <section id="homePage"
-            class="view-section fade-in flex flex-col items-center justify-end h-[calc(100vh-100px)] pb-12">
-            <div class="flex flex-col md:flex-row gap-6 w-full max-w-5xl justify-center px-4">
+            class="view-section fade-in flex flex-col items-center justify-end h-[calc(100vh-120px)] pb-10">
+            <div class="flex flex-col md:flex-row gap-4 w-full max-w-4xl justify-center px-4">
                 <!-- Student Portal -->
                 <div class="compact-module cursor-pointer group" onclick="app.navigateTo('studentLogin')">
                     <div
-                        class="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center group-hover:bg-cyan-500/20 transition duration-300">
-                        <i class="fas fa-graduation-cap text-xl text-cyan-400"></i>
+                        class="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center group-hover:bg-cyan-500/20 transition duration-300">
+                        <i class="fas fa-graduation-cap text-lg text-cyan-400"></i>
                     </div>
                     <div>
-                        <h3 class="text-sm font-bold text-white group-hover:text-cyan-400 transition">Student Access
+                        <h3 class="text-xs font-bold text-white group-hover:text-cyan-400 transition">Student Portal
                         </h3>
-                        <p class="text-[10px] text-slate-400 leading-tight">View academic marksheet</p>
+                        <p class="text-[9px] text-slate-400">Academic records</p>
                     </div>
                 </div>
 
                 <!-- Admin Portal -->
                 <div class="compact-module cursor-pointer group" onclick="app.navigateTo('adminLogin')">
                     <div
-                        class="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center group-hover:bg-purple-500/20 transition duration-300">
-                        <i class="fas fa-shield-halved text-xl text-purple-400"></i>
+                        class="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center group-hover:bg-purple-500/20 transition duration-300">
+                        <i class="fas fa-shield-halved text-lg text-purple-400"></i>
                     </div>
                     <div>
-                        <h3 class="text-sm font-bold text-white group-hover:text-purple-400 transition">Admin Control
-                        </h3>
-                        <p class="text-[10px] text-slate-400 leading-tight">Database management</p>
+                        <h3 class="text-xs font-bold text-white group-hover:text-purple-400 transition">Admin Panel</h3>
+                        <p class="text-[9px] text-slate-400">Management</p>
                     </div>
                 </div>
             </div>
@@ -1304,7 +1299,7 @@
     </script>
 
     <!-- Original App Script -->
-    <script src="js/app.js?v=16"></script>
+    <script src="js/app.js?v=17"></script>
 
 </body>
 
