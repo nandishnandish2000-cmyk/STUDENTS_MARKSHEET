@@ -9,6 +9,9 @@ CREATE TABLE IF NOT EXISTS students (
     name VARCHAR(100) NOT NULL,
     reg_no VARCHAR(50) NOT NULL,
     semester VARCHAR(20) NOT NULL,
+    total_marks VARCHAR(10) DEFAULT '0',
+    result VARCHAR(20) DEFAULT 'FAIL',
+    marksheet_path VARCHAR(255) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY unique_student_sem (reg_no, semester)
 );

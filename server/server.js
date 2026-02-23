@@ -56,14 +56,14 @@ function parseMarksheetText(rawText) {
 
     // ── 1. Student Name ──────────────────────────────────────────────────────
     const namePatterns = [
-        /(?:name\s+of\s+(?:the\s+)?(?:student|candidate|examinee)|student\s*name|candidate\s*name|examinee\s*name)\s*[:\-]\s*([A-Za-z][A-Za-z .]{2,60})/i,
-        /(?:^|\n)\s*name\s*[:\-]\s*([A-Za-z][A-Za-z .]{2,60})/im,
-        /\bname\b\s*[:\-]\s*([A-Za-z][A-Za-z .]{2,60})/i,
+        /(?:name\s+of\s+(?:the\s+)?(?:student|candidate|examinee)|student\s*name|candidate\s*name|examinee\s*name|Name\s*:)\s*[:\-]?\s*([A-Za-z][A-Za-z .]{2,60})/i,
+        /(?:^|\n)\bName\s*:\s*([A-Za-z][A-Za-z .]{2,60})/im,
+        /(?:^|\n)\bN\s*A\s*M\s*E\s*:\s*([A-Za-z][A-Za-z .]{2,60})/im,
     ];
     for (const p of namePatterns) {
         const m = fullText.match(p);
         if (m) {
-            const c = m[1].trim().replace(/\s*\d.*$/, '').trim();
+            const c = m[1].trim().replace(/\s*\d.*$/, '').replace(/^[ \t:\-]+/, '').trim();
             if (c.length >= 3) { parsed.student_name = c; break; }
         }
     }
@@ -85,7 +85,7 @@ function parseMarksheetText(rawText) {
 
     // ── 2. Register Number ───────────────────────────────────────────────────
     const regPatterns = [
-        /(?:register(?:ation)?\s*(?:no\.?|number)|reg\.?\s*no\.?|roll\s*(?:no\.?|number)|enroll(?:ment)?\s*(?:no\.?|number)|hall\s*ticket\s*(?:no\.?|number)?)\s*[:\-]?\s*([A-Z0-9\/\-]{4,20})/i,
+        /(?:register(?:ation)?\s*(?:no\.?|number)|reg\.?\s*no\.?|roll\s*(?:no\.?|number)|enroll(?:ment)?\s*(?:no\.?|number)|hall\s*ticket\s*(?:no\.?|number)?|Register\s*Number\s*:)\s*[:\-]?\s*([A-Z0-9\/\-]{4,20})/i,
     ];
     for (const p of regPatterns) {
         const m = fullText.match(p);
@@ -93,9 +93,9 @@ function parseMarksheetText(rawText) {
     }
     if (!parsed.register_number) {
         const fallbacks = [
-            /\b(\d{2}[A-Z]{2,5}\d{2,6})\b/,   // 21CS101
-            /\b([A-Z]{2,4}\d{2,4}[A-Z0-9]{2,6})\b/, // CS21A001
-            /\b(\d{6,12})\b/,                   // Pure numeric (6-12 digits)
+            /(?:^|\n)\s*(\d{8,12})\s*(\n|$)/, // Isolated 10-digit number
+            /\b(\d{2}[A-Z]{1,5}\d{2,8})\b/i,   // 21CS101
+            /\b([A-Z]{1,4}\d{1,8})\b/i,        // K0153
         ];
         for (const p of fallbacks) {
             const m = fullText.match(p);
@@ -142,7 +142,17 @@ function parseMarksheetText(rawText) {
             if (m) { sub = m[1]; marks = m[2]; subResult = m[3]; }
         }
 
-        // D: "Subject  marks  PASS"
+        // D: "Subject  marks  ext  total  PASS" (Bharathiar Format: 11T TAMILI 021+039 P)
+        if (!sub) {
+            m = line.match(/^([A-Z0-9]{2,5})\s+([A-Za-z][A-Za-z &()\-\/.,]{2,55}?)\s{1,4}(\d{1,3})\+(\d{1,3})\s+(PASS|FAIL|P|F|AB)\b/i);
+            if (m) {
+                sub = m[2];
+                marks = String(+m[3] + +m[4]);
+                subResult = m[5];
+            }
+        }
+
+        // E: "Subject  marks  PASS"
         if (!sub) {
             m = line.match(/^([A-Za-z][A-Za-z &()\-\/.,]{1,55}?)\s{1,4}(\d{2,3})\s+(PASS|FAIL|P|F|AB)\b/i);
             if (m) { sub = m[1]; marks = m[2]; subResult = m[3]; }
@@ -229,29 +239,38 @@ async function extractWithGPT(filePath, isPdf = false) {
     }
 
     const prompt = `
-        You are a highly accurate Student Marksheet Extraction AI. 
-        Your task is to analyze the provided marksheet image and extract data into a strict JSON structure.
+        You are a Student Marksheet Data Extraction Expert. 
+        Your task is to analyze the provided marksheet image and extract data into a specific JSON format.
+        
+        Fields to find:
+        1. Student Name (Look for "Name:", "Candidate Name", etc.)
+        2. Register Number (Look for "Register Number:", "Reg No", "Roll No", etc.)
+        3. Subjects Table:
+           - Subject Code (e.g., 11T, 12E)
+           - Subject Name (Full descriptive name)
+           - Marks (If marks are in "INT+EXT" or "021+039" format, sum them up and return the total)
+           - Result (PASS or FAIL, often represented by "P" or "F")
         
         Required JSON Structure:
         {
-          "student_name": "Full name of the student",
-          "register_number": "Register/Roll number",
+          "student_name": "Full Name",
+          "register_number": "Reg Number",
           "subjects": [
             {
-              "subject": "Full name of the subject",
-              "marks": "Total marks obtained (as a string)",
+              "subject": "Full Subject Name (include code if helpful)",
+              "marks": "Total obtained (as string)",
               "result": "PASS or FAIL"
             }
           ],
-          "total_marks": "Grand total obtained (as a string)",
-          "result": "Overall result (PASS or FAIL)"
+          "total_marks": "Grand Total",
+          "result": "Overall Result (PASS/FAIL)"
         }
         
         Critical Instructions:
-        1. Accuracy is paramount. If a subject name is long, capture it fully.
-        2. If marks are split (Internal/External), sum them up.
-        3. Determine subject result (PASS/FAIL) based on the marksheet indicators (often 'P' or 'F').
-        4. Return ONLY the JSON object. Do not include markdown code blocks or additional text.
+        - Accuracy is mandatory. Do not hallucinate.
+        - If a subject name spans multiple columns/lines, combine it.
+        - If marks are provided as an addition (e.g., 20+40), return 60.
+        - Return ONLY the JSON object. No markdown, no text.
     `;
 
     try {
@@ -272,7 +291,13 @@ async function extractWithGPT(filePath, isPdf = false) {
             response_format: { type: "json_object" }
         });
 
-        const extraction = JSON.parse(response.choices[0].message.content);
+        let content = response.choices[0].message.content.trim();
+        // Robust cleanup: remove markdown blocks if present
+        if (content.startsWith('```')) {
+            content = content.replace(/^```(?:json)?\s*|\s*```$/g, '');
+        }
+
+        const extraction = JSON.parse(content);
         console.log('[GPT OCR] Extraction Successful');
         return extraction;
     } catch (err) {
@@ -532,6 +557,9 @@ app.post('/api/extract-marksheet', upload.single('marksheet'), async (req, res) 
 
         const relativePath = 'uploads/' + path.basename(filePath);
         const warning = (parseInt(parsedData.ocr_confidence) < 60) ? `OCR confidence is low (${parsedData.ocr_confidence}). Please verify all fields manually.` : null;
+        const aiStatus = (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'no-key-provided')
+            ? 'OpenAI GPT-4o Intelligence Active'
+            : 'Tesseract Fallback (OpenAI API key missing in Render dashboard)';
 
         res.json({
             success: true,
@@ -539,7 +567,8 @@ app.post('/api/extract-marksheet', upload.single('marksheet'), async (req, res) 
             rawText: rawText,
             confidence: parseInt(parsedData.ocr_confidence),
             warning: warning,
-            marksheetPath: relativePath
+            marksheetPath: relativePath,
+            ai_status: aiStatus
         });
     } catch (err) {
         console.error('[OCR Error]', err);
@@ -548,11 +577,66 @@ app.post('/api/extract-marksheet', upload.single('marksheet'), async (req, res) 
     }
 });
 
-// ─── DB Health Check ───────────────────────────────────────────────────────────
-db.query('SELECT 1').then(() => {
-    console.log('✓ Database connected');
-}).catch(err => {
-    console.error('✗ Database connection failed:', err.message);
-});
+// ─── DB Auto-Migration & Health Check ───────────────────────────────────────
+async function initializeDatabase() {
+    try {
+        console.log('[DB] Connecting to host:', process.env.DB_HOST ? (process.env.DB_HOST.includes('@') ? '***@' + process.env.DB_HOST.split('@')[1] : process.env.DB_HOST) : 'localhost');
+        console.log('[DB] Running auto-migration check...');
+
+        // 1. Create students table if not exists
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS students (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                uuid VARCHAR(36) NOT NULL UNIQUE,
+                name VARCHAR(100) NOT NULL,
+                reg_no VARCHAR(50) NOT NULL,
+                semester VARCHAR(20) NOT NULL,
+                total_marks VARCHAR(10) DEFAULT '0',
+                result VARCHAR(20) DEFAULT 'FAIL',
+                marksheet_path VARCHAR(255) DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_student_sem (reg_no, semester)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        `);
+
+        // 2. Add missing columns to students if they don't exist (for existing DBs)
+        const [studentCols] = await db.query("SHOW COLUMNS FROM students");
+        const colNames = studentCols.map(c => c.Field.toLowerCase());
+
+        if (!colNames.includes('total_marks')) {
+            await db.query("ALTER TABLE students ADD COLUMN total_marks VARCHAR(10) DEFAULT '0'");
+            console.log('[DB] Added total_marks column');
+        }
+        if (!colNames.includes('result')) {
+            await db.query("ALTER TABLE students ADD COLUMN result VARCHAR(20) DEFAULT 'FAIL'");
+            console.log('[DB] Added result column');
+        }
+        if (!colNames.includes('marksheet_path')) {
+            await db.query("ALTER TABLE students ADD COLUMN marksheet_path VARCHAR(255) DEFAULT NULL");
+            console.log('[DB] Added marksheet_path column');
+        }
+
+        // 3. Create marks table if not exists
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS marks (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                student_id INT NOT NULL,
+                subject_name VARCHAR(100) NOT NULL,
+                mark INT NOT NULL,
+                paper_type VARCHAR(20) DEFAULT 'CORE',
+                overall_max_marks INT DEFAULT 75,
+                internal_marks INT DEFAULT 0,
+                FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        `);
+
+        console.log('✓ Database system synchronized and connected');
+    } catch (err) {
+        console.error('✗ Database synchronization failed:', err.message);
+        // Don't exit process, let app run so user can see error in dashboard
+    }
+}
+
+initializeDatabase();
 
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));

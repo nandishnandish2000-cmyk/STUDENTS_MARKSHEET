@@ -887,6 +887,17 @@ const app = {
 
                 app._currentMarksheetRemotePath = data.marksheetPath;
 
+                if (data.ai_status) {
+                    const badge = document.getElementById('ocrEngineBadge');
+                    if (badge) {
+                        badge.textContent = data.ai_status;
+                        badge.classList.remove('text-cyan-400', 'text-amber-400');
+                        badge.classList.add(data.ai_status.includes('Active') ? 'text-cyan-400' : 'text-amber-400');
+                    }
+                    app.showToast(data.ai_status, data.ai_status.includes('Active') ? 'success' : 'info');
+                }
+
+                console.log('[App] Extracted Data received:', data.data);
                 app.displayExtractedData(data.data);
                 document.getElementById('uploadStep2').classList.remove('hidden');
             } else {

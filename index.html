@@ -680,11 +680,28 @@
 
                 <!-- Editable Verification Form -->
                 <div class="glass-card p-8 rounded-2xl">
-                    <h3 class="text-base font-bold text-white uppercase tracking-widest mb-1 flex items-center gap-3">
-                        <i class="fas fa-edit text-cyan-400"></i> Verify & Edit Extracted Data
-                    </h3>
-                    <p class="text-slate-500 text-xs mb-8">All fields are auto-filled from OCR. Correct any errors
-                        before saving.</p>
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                        <div>
+                            <h3
+                                class="text-base font-bold text-white uppercase tracking-widest mb-1 flex items-center gap-3">
+                                <i class="fas fa-edit text-cyan-400"></i> Verify & Edit Extracted Data
+                            </h3>
+                            <p class="text-slate-500 text-xs">All fields are auto-filled from OCR. Correct any errors
+                                before saving.</p>
+                        </div>
+                        <div class="flex items-center gap-3 bg-slate-900/50 p-3 rounded-xl border border-white/5">
+                            <div class="flex flex-col items-end">
+                                <span class="text-[9px] uppercase tracking-widest text-slate-500 font-bold">Extraction
+                                    Engine</span>
+                                <span id="ocrEngineBadge"
+                                    class="text-[11px] font-bold text-cyan-400 font-[Orbitron]">Initializing
+                                    System...</span>
+                            </div>
+                            <div class="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+                                <i class="fas fa-microchip text-cyan-400"></i>
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- Row 1: Name + Reg No -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -1123,56 +1140,56 @@
                 </button>
                 <div class="text-right">
                     <h2 class="text-3xl font-bold text-white font-[Orbitron] tracking-tighter">COGNITIVE SUMMARY</h2>
-                    <p class="text-xs text-cyan-400 mt-2 uppercase tracking-[0.4em] font-bold">Total Performance Profile
-                    </p>
                 </div>
-            </div>
 
-            <!-- Dashboard Stats -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-                <div class="glass-card p-8 rounded-2xl text-center border-white/5">
-                    <span class="text-[10px] text-slate-400 uppercase font-black tracking-[0.3em] block mb-4">Core
-                        Efficiency</span>
-                    <span id="overallCorePercent" class="text-4xl font-bold text-white font-[Orbitron]">--%</span>
-                </div>
-                <div class="glass-card p-8 rounded-2xl text-center border-white/5">
-                    <span class="text-[10px] text-slate-400 uppercase font-black tracking-[0.3em] block mb-4">Total
-                        Nodes</span>
-                    <span id="overallTotalSubjects" class="text-4xl font-bold text-cyan-400 font-[Orbitron]">--</span>
-                </div>
-                <div class="glass-card p-8 rounded-2xl text-center border-white/5">
-                    <span class="text-[10px] text-slate-400 uppercase font-black tracking-[0.3em] block mb-4">Core
-                        Credits</span>
-                    <span id="overallCoreCount" class="text-4xl font-bold text-indigo-400 font-[Orbitron]">--</span>
-                </div>
-                <div class="glass-card p-8 rounded-2xl text-center border-white/5">
-                    <span
-                        class="text-[10px] text-slate-400 uppercase font-black tracking-[0.3em] block mb-4">Status</span>
-                    <span id="overallFinalStatus"
-                        class="text-2xl font-bold text-emerald-400 font-[Orbitron] mt-1 block">ACTIVE</span>
-                </div>
-            </div>
+                <!-- Confidence Bar -->
 
-            <!-- Career Path / Insights -->
-            <div
-                class="glass-card p-10 rounded-2xl mb-10 border-cyan-500/20 bg-gradient-to-br from-slate-900/80 to-slate-950/80 overflow-hidden relative">
-                <div class="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
-                    <i class="fas fa-project-diagram text-[10rem] text-cyan-400"></i>
-                </div>
-                <div class="relative z-10">
-                    <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-3 font-[Orbitron]">
-                        <i class="fas fa-lightbulb text-amber-400"></i> NEURAL INSIGHTS & CAREER ARCHITECTURE
-                    </h3>
-                    <div id="careerInsights" class="text-slate-300 leading-relaxed text-lg italic">
-                        Analyzing core subject patterns to generate career trajectories...
+                <!-- Dashboard Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+                    <div class="glass-card p-8 rounded-2xl text-center border-white/5">
+                        <span class="text-[10px] text-slate-400 uppercase font-black tracking-[0.3em] block mb-4">Core
+                            Efficiency</span>
+                        <span id="overallCorePercent" class="text-4xl font-bold text-white font-[Orbitron]">--%</span>
+                    </div>
+                    <div class="glass-card p-8 rounded-2xl text-center border-white/5">
+                        <span class="text-[10px] text-slate-400 uppercase font-black tracking-[0.3em] block mb-4">Total
+                            Nodes</span>
+                        <span id="overallTotalSubjects"
+                            class="text-4xl font-bold text-cyan-400 font-[Orbitron]">--</span>
+                    </div>
+                    <div class="glass-card p-8 rounded-2xl text-center border-white/5">
+                        <span class="text-[10px] text-slate-400 uppercase font-black tracking-[0.3em] block mb-4">Core
+                            Credits</span>
+                        <span id="overallCoreCount" class="text-4xl font-bold text-indigo-400 font-[Orbitron]">--</span>
+                    </div>
+                    <div class="glass-card p-8 rounded-2xl text-center border-white/5">
+                        <span
+                            class="text-[10px] text-slate-400 uppercase font-black tracking-[0.3em] block mb-4">Status</span>
+                        <span id="overallFinalStatus"
+                            class="text-2xl font-bold text-emerald-400 font-[Orbitron] mt-1 block">ACTIVE</span>
                     </div>
                 </div>
-            </div>
 
-            <!-- Semester Timeline -->
-            <div id="semesterTimelineContainer" class="space-y-8">
-                <!-- Dynamic semesters filled here -->
-            </div>
+                <!-- Career Path / Insights -->
+                <div
+                    class="glass-card p-10 rounded-2xl mb-10 border-cyan-500/20 bg-gradient-to-br from-slate-900/80 to-slate-950/80 overflow-hidden relative">
+                    <div class="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
+                        <i class="fas fa-project-diagram text-[10rem] text-cyan-400"></i>
+                    </div>
+                    <div class="relative z-10">
+                        <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-3 font-[Orbitron]">
+                            <i class="fas fa-lightbulb text-amber-400"></i> NEURAL INSIGHTS & CAREER ARCHITECTURE
+                        </h3>
+                        <div id="careerInsights" class="text-slate-300 leading-relaxed text-lg italic">
+                            Analyzing core subject patterns to generate career trajectories...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Semester Timeline -->
+                <div id="semesterTimelineContainer" class="space-y-8">
+                    <!-- Dynamic semesters filled here -->
+                </div>
         </section>
 
         <!-- 10. STUDENT MARKSHEET -->
