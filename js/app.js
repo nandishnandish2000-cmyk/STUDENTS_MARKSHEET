@@ -132,9 +132,8 @@ const app = {
         const overallMax = (initialData && initialData.overall_max_marks) ? initialData.overall_max_marks : 75;
         const internal = (initialData && initialData.internal_marks !== undefined) ? initialData.internal_marks : 0;
         const mark = (initialData && initialData.mark !== undefined) ? initialData.mark : '';
-        // Result field — only shown in upload/extracted context
         const result = (initialData && initialData.result) ? initialData.result : 'PASS';
-        const showResult = containerId === 'extractedSubjectsContainer';
+        const showResult = true; // ALWAYS SHOW RESULT - USER IS IN CONTROL
 
         div.innerHTML = `
             <div class="flex-1 min-w-[150px]">
@@ -143,15 +142,16 @@ const app = {
             </div>
             <div class="w-28">
                 <label class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Type</label>
-                <select class="paper-type w-full bg-slate-900 border-slate-700 rounded-xl p-3 text-white focus:ring-cyan-500 focus:border-cyan-500 transition-all">
+                <select class="paper-type w-full bg-slate-900 border-slate-700 rounded-xl p-3 text-white focus:ring-cyan-500 focus:border-cyan-500 transition-all text-xs font-bold">
                     <option value="CORE" ${paperType === 'CORE' ? 'selected' : ''}>CORE</option>
                     <option value="ALLIED" ${paperType === 'ALLIED' ? 'selected' : ''}>ALLIED</option>
-                    <option value="PRACTICAL" ${paperType === 'PRACTICAL' ? 'selected' : ''}>PRACTICAL</option>
+                    <option value="PRACTICAL" ${paperType === 'PRACTICAL' || paperType === 'PRAC' ? 'selected' : ''}>PRAC</option>
+                    <option value="NON" ${paperType === 'NON' ? 'selected' : ''}>NON</option>
                 </select>
             </div>
             <div class="w-20">
-                <label class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Max</label>
-                <select class="overall-max w-full bg-slate-900 border-slate-700 rounded-xl p-3 text-white focus:ring-cyan-500 focus:border-cyan-500 transition-all">
+                <label class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Max(Ext)</label>
+                <select class="overall-max w-full bg-slate-900 border-slate-700 rounded-xl p-3 text-white focus:ring-cyan-500 focus:border-cyan-500 transition-all font-mono">
                     <option value="25" ${overallMax == 25 ? 'selected' : ''}>25</option>
                     <option value="50" ${overallMax == 50 ? 'selected' : ''}>50</option>
                     <option value="75" ${overallMax == 75 ? 'selected' : ''}>75</option>
@@ -169,9 +169,10 @@ const app = {
             ${showResult ? `
             <div class="w-24">
                 <label class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Result</label>
-                <select class="subject-result w-full bg-slate-900 border-slate-700 rounded-xl p-3 font-bold focus:ring-cyan-500 focus:border-cyan-500 transition-all ${result === 'PASS' ? 'text-emerald-400' : 'text-rose-400'}" onchange="this.className=this.value==='PASS'?'subject-result w-full bg-slate-900 border-slate-700 rounded-xl p-3 font-bold focus:ring-cyan-500 focus:border-cyan-500 transition-all text-emerald-400':'subject-result w-full bg-slate-900 border-slate-700 rounded-xl p-3 font-bold focus:ring-cyan-500 focus:border-cyan-500 transition-all text-rose-400'">
+                <select class="subject-result w-full bg-slate-900 border-slate-700 rounded-xl p-3 font-bold focus:ring-cyan-500 focus:border-cyan-500 transition-all ${result.startsWith('P') ? 'text-emerald-400' : 'text-rose-400'}" onchange="this.className='subject-result w-full bg-slate-900 border-slate-700 rounded-xl p-3 font-bold focus:ring-cyan-500 focus:border-cyan-500 transition-all ' + (this.value.startsWith('P') ? 'text-emerald-400' : 'text-rose-400')">
                     <option value="PASS" ${result === 'PASS' ? 'selected' : ''} style="color:#34d399">PASS</option>
                     <option value="FAIL" ${result === 'FAIL' ? 'selected' : ''} style="color:#f87171">FAIL</option>
+                    <option value="P." ${result === 'P.' ? 'selected' : ''} style="color:#34d399">P.</option>
                 </select>
             </div>` : ''}
             <button type="button" onclick="this.parentElement.remove()" class="text-rose-500 hover:text-rose-400 p-3 mb-1 transition-colors flex-shrink-0"><i class="fas fa-trash-alt"></i></button>
@@ -211,7 +212,7 @@ const app = {
             }
 
             const resultEl = row.querySelector('.subject-result');
-            const result = resultEl ? resultEl.value : (mark >= overall_max_marks * 0.4 ? 'PASS' : 'FAIL');
+            const result = resultEl ? resultEl.value : 'PASS'; // TRUST THE DROPDOWN ONLY.
 
             subjects.push({ name, paper_type, overall_max_marks, internal_marks, mark, result });
         });
@@ -992,10 +993,11 @@ const app = {
                 class="extracted-subject-marks w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all text-sm text-center font-mono font-bold"
                 value="${marks}">
             
-            <select class="extracted-subject-result w-full bg-slate-900 border border-slate-700 rounded-xl p-3 font-bold transition-all text-sm ${result === 'PASS' ? 'text-emerald-400' : 'text-rose-400'}"
-                onchange="this.className = 'extracted-subject-result w-full bg-slate-900 border border-slate-700 rounded-xl p-3 font-bold transition-all text-sm ' + (this.value === 'PASS' ? 'text-emerald-400' : 'text-rose-400')">
+            <select class="extracted-subject-result w-full bg-slate-900 border border-slate-700 rounded-xl p-3 font-bold transition-all text-sm ${result.startsWith('P') ? 'text-emerald-400' : 'text-rose-400'}"
+                onchange="this.className = 'extracted-subject-result w-full bg-slate-900 border border-slate-700 rounded-xl p-3 font-bold transition-all text-sm ' + (this.value.startsWith('P') ? 'text-emerald-400' : 'text-rose-400')">
                 <option value="PASS" ${result === 'PASS' ? 'selected' : ''} style="color:#34d399">PASS</option>
                 <option value="FAIL" ${result === 'FAIL' ? 'selected' : ''} style="color:#f87171">FAIL</option>
+                <option value="P." ${result === 'P.' ? 'selected' : ''} style="color:#34d399">P.</option>
             </select>
             
             <button type="button" onclick="this.parentElement.remove()" class="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 transition flex items-center justify-center">
