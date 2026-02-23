@@ -550,18 +550,16 @@ const app = {
                     const subTotal = internal + external;
                     const subMaxTotal = overallMax + 25;
 
-                    // Result Logic - THE FINAL NUCLEAR FIX
-                    // 1. Get raw string from DB
-                    const rawDbResult = (sub.result || "").toString().trim().toUpperCase();
+                    // Result Logic - THE ULTIMATE DATA MIRROR
+                    // We remove ALL logic here. If the DB has "P.", show "P.".
+                    // No more mapping to "PASS" or "FAIL" words unless that's what's in the DB.
+                    const statusText = (sub.result || "").toString().trim().toUpperCase();
 
-                    // 2. Identify if it represents a PASS (Common formats: "PASS", "P", "P.", "PASS.")
-                    const isActuallyPass = rawDbResult.includes("PASS") || rawDbResult === "P" || rawDbResult === "P.";
+                    // Simple loose check for visual color only (F = Fail)
+                    const isFail = statusText.startsWith("F");
+                    const statusClass = isFail ? "bg-rose-500/10 text-rose-400 border-rose-500/20" : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
 
-                    // 3. Set visual labels based on the DB value
-                    const statusText = isActuallyPass ? "PASS" : "FAIL";
-                    const statusClass = isActuallyPass ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-rose-500/10 text-rose-400 border-rose-500/20";
-
-                    if (!isActuallyPass) hasFail = true;
+                    if (isFail) hasFail = true;
 
                     // Calculation Logic for Overall Total: Count everything except 'NON' paper types for percentage
                     if (paperType !== 'NON') {
@@ -584,7 +582,7 @@ const app = {
                         <td class="text-center py-5 font-black text-white font-mono text-base">${subTotal}</td>
                         <td class="text-center py-5 pr-8">
                             <span class="inline-block px-4 py-1.5 rounded-lg border font-black text-[10px] tracking-[0.2em] shadow-lg ${statusClass}">
-                                ${statusText}
+                                ${statusText || '—'}
                             </span>
                         </td>
                     `;
