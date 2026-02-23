@@ -248,9 +248,9 @@ async function extractWithGPT(filePath, isPdf = false) {
         3. Subjects Table:
            - Subject Code (e.g., 11T, 12E)
            - Subject Name (Full descriptive name)
-           - Paper Type (Is it CORE, ALLIED, PRACTICAL, or ELECTIVE? Look for these labels or prefixes)
+           - Paper Type (Look for labels in the "SUBJECT NAME" column. If it says "CORE:" or prefix is "CORE", value is "CORE". If "ALLIED:", value is "ALLIED". If "CORE PRACTICAL:", value is "PRACTICAL". If it's a language like TAMIL/ENGLISH or has no prefix, value is "CORE" or "GEN" depending on university context - for Bharathiar, keep literal prefix if found, otherwise default to CORE unless it's obviously special like Environmental Studies.)
            - Marks (If marks are in "INT+EXT" or "021+039" format, sum them up and return the total)
-           - Result (PASS or FAIL, often represented by "P" or "F")
+           - Result (STRICTLY extract the character from the "RESULT" column. If it is "P." or "P", return "PASS". If it is "F." or "F", return "FAIL". DO NOT calculate this based on marks.)
         
         Required JSON Structure:
         {
@@ -397,8 +397,8 @@ app.post('/api/students/:semester', async (req, res) => {
         const studentId = result.insertId;
         for (const sub of subjects) {
             await db.query(
-                'INSERT INTO marks (student_id, subject_name, mark, paper_type, overall_max_marks, internal_marks) VALUES (?, ?, ?, ?, ?, ?)',
-                [studentId, (sub.name || sub.subject || '').trim(), sub.mark || sub.marks || 0, sub.paper_type || 'CORE', sub.overall_max_marks || 75, sub.internal_marks || 0]
+                'INSERT INTO marks (student_id, subject_name, mark, paper_type, overall_max_marks, internal_marks, result) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [studentId, (sub.name || sub.subject || '').trim(), sub.mark || sub.marks || 0, sub.paper_type || 'CORE', sub.overall_max_marks || 75, sub.internal_marks || 0, sub.result || 'PASS']
             );
         }
         console.log(`Added: ${name} (${regNo}) → ${semester}`);
@@ -429,8 +429,8 @@ app.put('/api/students/:semester/:uuid', async (req, res) => {
         await db.query('DELETE FROM marks WHERE student_id = ?', [studentId]);
         for (const sub of subjects) {
             await db.query(
-                'INSERT INTO marks (student_id, subject_name, mark, paper_type, overall_max_marks, internal_marks) VALUES (?, ?, ?, ?, ?, ?)',
-                [studentId, (sub.name || '').trim(), sub.mark, sub.paper_type || 'CORE', sub.overall_max_marks || 75, sub.internal_marks || 0]
+                'INSERT INTO marks (student_id, subject_name, mark, paper_type, overall_max_marks, internal_marks, result) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [studentId, (sub.name || '').trim(), sub.mark, sub.paper_type || 'CORE', sub.overall_max_marks || 75, sub.internal_marks || 0, sub.result || 'PASS']
             );
         }
         res.json({ success: true, message: 'Student updated successfully' });
@@ -618,7 +618,7 @@ async function initializeDatabase() {
             console.log('[DB] Added marksheet_path column');
         }
 
-        // 3. Create marks table if not exists
+        // 3. Create marks table if not exists with result column
         await db.query(`
             CREATE TABLE IF NOT EXISTS marks (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -628,9 +628,18 @@ async function initializeDatabase() {
                 paper_type VARCHAR(20) DEFAULT 'CORE',
                 overall_max_marks INT DEFAULT 75,
                 internal_marks INT DEFAULT 0,
+                result VARCHAR(10) DEFAULT 'PASS',
                 FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
         `);
+
+        // Add result column to marks if it doesn't exist
+        const [marksCols] = await db.query("SHOW COLUMNS FROM marks");
+        const marksColNames = marksCols.map(c => c.Field.toLowerCase());
+        if (!marksColNames.includes('result')) {
+            await db.query("ALTER TABLE marks ADD COLUMN result VARCHAR(10) DEFAULT 'PASS'");
+            console.log('[DB] Added result column to marks table');
+        }
 
         console.log('✓ Database system synchronized and connected');
     } catch (err) {

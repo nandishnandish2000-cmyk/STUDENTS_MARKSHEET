@@ -550,17 +550,17 @@ const app = {
                     const subTotal = internal + external;
                     const subMaxTotal = overallMax + 25;
 
-                    // Result Logic
-                    const isPass = subTotal >= (subMaxTotal * 0.40);
-                    const resultText = isPass ? 'PASS' : 'FAIL';
+                    // Result Logic - Strictly use data from DB
+                    const resultText = sub.result || (subTotal >= (subMaxTotal * 0.40) ? 'PASS' : 'FAIL');
+                    const isPass = resultText === 'PASS';
                     const resultClass = isPass ? 'text-emerald-400' : 'text-rose-400';
                     if (!isPass) hasFail = true;
 
-                    // Calculation Logic: Only CORE for total/percentage
-                    if (paperType === 'CORE') {
-                        totalObtained += subTotal;
-                        totalMax += subMaxTotal;
-                    }
+                    // Calculation Logic: Count everything for total unless explicitly ignored, 
+                    // but for Bharathiar, usually TAMIL/ENGLISH/CORE/ALLIED all count.
+                    // If paperType is 'GEN' or 'NME', it might be excluded.
+                    totalObtained += subTotal;
+                    totalMax += subMaxTotal;
 
                     const tr = document.createElement('tr');
                     tr.className = 'border-b border-gray-100';
