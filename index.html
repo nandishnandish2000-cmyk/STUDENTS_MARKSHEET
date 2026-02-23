@@ -27,294 +27,71 @@
     <script type="module" src="https://unpkg.com/@splinetool/viewer@1.12.37/build/spline-viewer.js"></script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500&display=swap');
-
-        .fade-in {
-            animation: fadeIn 0.3s ease-in-out;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-
-            to {
-                opacity: 1;
-            }
-        }
-
-        /* Spline Background Styles */
-        #spline-bg {
-            position: fixed;
+        /* HUD Scanners & Grid Effects */
+        .hud-scanline {
+            position: absolute;
             top: 0;
             left: 0;
             width: 100%;
-            height: 100%;
-            z-index: 0;
-            background: #000000;
-            opacity: 1;
-            visibility: visible;
-            transition: opacity 1.5s ease-in-out;
-        }
-
-
-
-        spline-viewer {
-            position: relative;
-            z-index: 1;
-        }
-
-        /* Additional Spline watermark hiding via CSS */
-        spline-viewer::part(logo),
-        spline-viewer [id*="logo"],
-        spline-viewer a[href*="spline"],
-        #robot-spline::part(logo) {
-            display: none !important;
-            visibility: hidden !important;
-            opacity: 0 !important;
-        }
-
-        /* Watermark Cover Element - Solid cover to hide badge */
-        #spline-watermark-cover {
-            position: fixed;
-            bottom: 0;
-            right: 0;
-            width: 260px;
-            height: 70px;
-            /* Solid color matching the Spline scene's bottom-right corner */
-            background: #000000;
-            z-index: 10;
+            height: 2px;
+            background: linear-gradient(to right, transparent, var(--primary), transparent);
+            opacity: 0.1;
+            animation: scanning 8s linear infinite;
             pointer-events: none;
         }
 
-        /* Overlay Text Styles */
-        #portal-title {
-            position: fixed;
-            top: 5%;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 10;
-            text-align: center;
-            width: 100%;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 1.5s ease-out;
-        }
+        @keyframes scanning {
+            0% {
+                top: 0;
+            }
 
-        #portal-subtitle {
-            position: fixed;
-            bottom: 5%;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 10;
-            text-align: center;
-            width: 100%;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 1.5s ease-out;
-        }
-
-        #portal-title.visible,
-        #portal-subtitle.visible {
-            opacity: 1;
-        }
-
-        .title-main {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 2.8rem;
-            font-weight: 700;
-            color: #ffffff;
-            letter-spacing: 0.15em;
-            line-height: 1.2;
-            text-shadow: 0 0 30px rgba(0, 200, 255, 0.4);
-            background: linear-gradient(to bottom, #ffffff 40%, #a5f3fc 100%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .highlight-text {
-            font-size: 0.8em;
-            color: #a5f3fc;
-            display: block;
-            margin-top: 5px;
-        }
-
-        .title-sub {
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 1.1rem;
-            color: #94a3b8;
-            letter-spacing: 0.4em;
-            text-transform: uppercase;
-            position: relative;
-            display: inline-block;
-        }
-
-        .title-sub::before,
-        .title-sub::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            width: 40px;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.5), transparent);
-        }
-
-        .title-sub::before {
-            left: -55px;
-        }
-
-        .title-sub::after {
-            right: -55px;
-        }
-
-        /* Custom Scrollbar for OCR List */
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(6, 182, 212, 0.3);
-            border-radius: 10px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: rgba(6, 182, 212, 0.5);
-        }
-
-        /* Glassmorphism for cards to show background */
-        .glass-card {
-            background: rgba(15, 23, 42, 0.6) !important;
-            backdrop-filter: blur(12px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            color: white !important;
-            pointer-events: auto !important;
-        }
-
-        /* Home Page Module Animation */
-        #homePage .glass-card {
-            opacity: 0;
-            transform: translateY(30px);
-            transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1), transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        #homePage .glass-card.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        /* Essential fixes for Spline interaction */
-        header,
-        main,
-        footer {
-            position: relative;
-            z-index: 10;
-            pointer-events: none !important;
-            /* Let mouse through to Spline */
-        }
-
-        /* Re-enable pointer events for all interactive elements */
-        input,
-        button,
-        a,
-        .glass-card,
-        select,
-        textarea,
-        [onclick],
-        .sem-btn {
-            pointer-events: auto !important;
-        }
-
-        /* Global Theme Overrides */
-        input:not([type="checkbox"]),
-        select {
-            background: rgba(15, 23, 42, 0.8) !important;
-            border-color: rgba(255, 255, 255, 0.1) !important;
-            color: white !important;
-        }
-
-        input:focus {
-            border-color: #22d3ee !important;
-            outline: none !important;
-        }
-
-        label {
-            color: #94a3b8 !important;
-        }
-
-        /* Table Styles */
-        table {
-            color: white !important;
-        }
-
-        th {
-            background: rgba(30, 41, 59, 0.8) !important;
-            color: #22d3ee !important;
-            text-transform: uppercase;
-            font-size: 0.75rem;
-            letter-spacing: 0.05em;
-        }
-
-        td {
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
-        }
-
-        tr:hover td {
-            background: rgba(56, 189, 248, 0.05) !important;
-        }
-
-        /* Semester Buttons */
-        .sem-btn {
-            background: rgba(15, 23, 42, 0.6) !important;
-            backdrop-filter: blur(8px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            transition: all 0.3s ease !important;
-        }
-
-        .sem-btn:hover {
-            border-color: #22d3ee !important;
-            box-shadow: 0 0 20px rgba(34, 211, 238, 0.2) !important;
-            transform: translateY(-4px);
-        }
-
-        /* Hide titles on other pages to keep clean look */
-        /* Circular Progress Styling */
-        .progress-ring__circle {
-            transition: stroke-dashoffset 0.35s;
-            transform: rotate(-90deg);
-            transform-origin: 50% 50%;
-        }
-
-        .confidence-high {
-            border-color: rgba(16, 185, 129, 0.4) !important;
-        }
-
-        .confidence-low {
-            border-color: rgba(245, 158, 11, 0.6) !important;
-            background: rgba(245, 158, 11, 0.05) !important;
-        }
-
-        /* Animation for pulse */
-        @keyframes pulse-cyan {
-
-            0%,
             100% {
-                filter: drop-shadow(0 0 5px rgba(34, 211, 238, 0.3));
-            }
-
-            50% {
-                filter: drop-shadow(0 0 15px rgba(34, 211, 238, 0.6));
+                top: 100%;
             }
         }
 
-        .pulse-loader {
-            animation: pulse-cyan 2s infinite;
+        .data-grid-overlay {
+            background-image: linear-gradient(rgba(34, 211, 238, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(34, 211, 238, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+            mask-image: radial-gradient(circle at center, black 40%, transparent 90%);
+        }
+
+        /* Specific Component Overrides */
+        .btn-premium.btn-cyan {
+            background: linear-gradient(135deg, #0891b2, #0e7490);
+        }
+
+        .btn-premium.btn-indigo {
+            background: linear-gradient(135deg, #4f46e5, #4338ca);
+        }
+
+        .btn-premium.btn-rose {
+            background: linear-gradient(135deg, #e11d48, #be123c);
+        }
+
+        .sem-btn .sem-number.text-cyan-400 {
+            color: #22d3ee;
+        }
+
+        .sem-btn .sem-number.text-emerald-400 {
+            color: #34d399;
+        }
+
+        .sem-btn .sem-number.text-amber-400 {
+            color: #fbbf24;
+        }
+
+        .sem-btn .sem-number.text-rose-400 {
+            color: #f87171;
+        }
+
+        .sem-btn .sem-number.text-purple-400 {
+            color: #a78bfa;
+        }
+
+        .sem-btn .sem-number.text-pink-400 {
+            color: #f472b6;
         }
     </style>
 </head>
@@ -372,28 +149,38 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl px-4">
                 <!-- Student Portal Card -->
-                <div class="glass-card p-10 rounded-2xl shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer group text-center"
+                <div class="glass-card p-10 rounded-2xl shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer group text-center relative overflow-hidden"
                     onclick="app.navigateTo('studentLogin')">
+                    <div class="hud-scanline"></div>
+                    <div class="data-grid-overlay absolute inset-0 opacity-20"></div>
                     <div
-                        class="w-20 h-20 mx-auto rounded-full bg-cyan-500/10 flex items-center justify-center mb-6 group-hover:bg-cyan-500/20 transition duration-500">
+                        class="w-20 h-20 mx-auto rounded-full bg-cyan-500/10 flex items-center justify-center mb-6 group-hover:bg-cyan-500/20 transition duration-500 relative z-10">
                         <i class="fas fa-user-graduate text-4xl text-cyan-400"></i>
                     </div>
-                    <h3 class="text-2xl font-bold mb-2 text-white group-hover:text-cyan-400 transition">Student Portal
+                    <h3
+                        class="text-2xl font-bold mb-2 text-white group-hover:text-cyan-400 transition relative z-10 font-[Orbitron] tracking-tight">
+                        Student Portal
                     </h3>
-                    <p class="text-slate-300 text-sm opacity-80 group-hover:opacity-100 transition">Access your academic
+                    <p class="text-slate-300 text-sm opacity-80 group-hover:opacity-100 transition relative z-10">Access
+                        your academic
                         records</p>
                 </div>
 
                 <!-- Admin Portal Card -->
-                <div class="glass-card p-10 rounded-2xl shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer group text-center"
+                <div class="glass-card p-10 rounded-2xl shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer group text-center relative overflow-hidden"
                     onclick="app.navigateTo('adminLogin')">
+                    <div class="hud-scanline"></div>
+                    <div class="data-grid-overlay absolute inset-0 opacity-20"></div>
                     <div
-                        class="w-20 h-20 mx-auto rounded-full bg-purple-500/10 flex items-center justify-center mb-6 group-hover:bg-purple-500/20 transition duration-500">
+                        class="w-20 h-20 mx-auto rounded-full bg-purple-500/10 flex items-center justify-center mb-6 group-hover:bg-purple-500/20 transition duration-500 relative z-10">
                         <i class="fas fa-user-shield text-4xl text-purple-400"></i>
                     </div>
-                    <h3 class="text-2xl font-bold mb-2 text-white group-hover:text-purple-400 transition">Admin Portal
+                    <h3
+                        class="text-2xl font-bold mb-2 text-white group-hover:text-purple-400 transition relative z-10 font-[Orbitron] tracking-tight">
+                        Admin Portal
                     </h3>
-                    <p class="text-slate-300 text-sm opacity-80 group-hover:opacity-100 transition">Manage student
+                    <p class="text-slate-300 text-sm opacity-80 group-hover:opacity-100 transition relative z-10">Manage
+                        student
                         records</p>
                 </div>
             </div>
@@ -422,7 +209,7 @@
                         <button type="button" class="text-slate-400 hover:text-white text-sm font-medium transition"
                             onclick="app.navigateTo('homePage')">Back</button>
                         <button type="submit"
-                            class="bg-blue-600 hover:bg-blue-500 text-white px-10 py-3.5 rounded-xl shadow-[0_0_15px_rgba(37,99,235,0.4)] transition-all font-bold tracking-widest uppercase text-xs">
+                            class="btn-premium btn-cyan text-white px-10 py-3.5 rounded-xl shadow-[0_0_15px_rgba(34,211,238,0.4)] transition-all font-bold tracking-widest uppercase text-xs">
                             Verify Port
                         </button>
                     </div>
@@ -440,30 +227,30 @@
                 <h2 class="text-3xl font-bold text-white tracking-wider uppercase font-[Orbitron]">Select Semester</h2>
                 <div class="w-10"></div>
             </div>
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-8">
-                <button onclick="app.selectAdminSemester('semester_1')" class="sem-btn p-8 rounded-2xl text-left">
-                    <span class="text-3xl font-bold text-cyan-400 block mb-1">01</span>
-                    <span class="text-slate-300 text-xs uppercase tracking-[0.2em] font-bold">Academic Semester</span>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-6">
+                <button onclick="app.selectAdminSemester('semester_1')" class="sem-btn group">
+                    <span class="sem-number text-cyan-400">01</span>
+                    <span class="sem-label">Cycle Index</span>
                 </button>
-                <button onclick="app.selectAdminSemester('semester_2')" class="sem-btn p-8 rounded-2xl text-left">
-                    <span class="text-3xl font-bold text-emerald-400 block mb-1">02</span>
-                    <span class="text-slate-300 text-xs uppercase tracking-[0.2em] font-bold">Academic Semester</span>
+                <button onclick="app.selectAdminSemester('semester_2')" class="sem-btn group">
+                    <span class="sem-number text-emerald-400">02</span>
+                    <span class="sem-label">Cycle Index</span>
                 </button>
-                <button onclick="app.selectAdminSemester('semester_3')" class="sem-btn p-8 rounded-2xl text-left">
-                    <span class="text-3xl font-bold text-amber-400 block mb-1">03</span>
-                    <span class="text-slate-300 text-xs uppercase tracking-[0.2em] font-bold">Academic Semester</span>
+                <button onclick="app.selectAdminSemester('semester_3')" class="sem-btn group">
+                    <span class="sem-number text-amber-400">03</span>
+                    <span class="sem-label">Cycle Index</span>
                 </button>
-                <button onclick="app.selectAdminSemester('semester_4')" class="sem-btn p-8 rounded-2xl text-left">
-                    <span class="text-3xl font-bold text-rose-400 block mb-1">04</span>
-                    <span class="text-slate-400 text-xs uppercase tracking-[0.2em] font-medium">Academic Semester</span>
+                <button onclick="app.selectAdminSemester('semester_4')" class="sem-btn group">
+                    <span class="sem-number text-rose-400">04</span>
+                    <span class="sem-label">Cycle Index</span>
                 </button>
-                <button onclick="app.selectAdminSemester('semester_5')" class="sem-btn p-8 rounded-2xl text-left">
-                    <span class="text-3xl font-bold text-purple-400 block mb-1">05</span>
-                    <span class="text-slate-400 text-xs uppercase tracking-[0.2em] font-medium">Academic Semester</span>
+                <button onclick="app.selectAdminSemester('semester_5')" class="sem-btn group">
+                    <span class="sem-number text-purple-400">05</span>
+                    <span class="sem-label">Cycle Index</span>
                 </button>
-                <button onclick="app.selectAdminSemester('semester_6')" class="sem-btn p-8 rounded-2xl text-left">
-                    <span class="text-3xl font-bold text-pink-400 block mb-1">06</span>
-                    <span class="text-slate-400 text-xs uppercase tracking-[0.2em] font-medium">Academic Semester</span>
+                <button onclick="app.selectAdminSemester('semester_6')" class="sem-btn group">
+                    <span class="sem-number text-pink-400">06</span>
+                    <span class="sem-label">Cycle Index</span>
                 </button>
             </div>
         </section>
@@ -485,11 +272,11 @@
                 </div>
                 <div class="flex gap-4">
                     <button onclick="app.loadStudentList()"
-                        class="bg-cyan-500/10 text-cyan-400 px-6 py-2.5 rounded-xl hover:bg-cyan-500/20 transition font-bold text-sm border border-cyan-500/30">
+                        class="btn-premium bg-cyan-500/10 text-cyan-400 px-6 py-2.5 rounded-xl hover:bg-cyan-500/20 transition font-bold text-sm border border-cyan-500/30">
                         <i class="fas fa-sync-alt mr-2"></i> Sync
                     </button>
                     <button onclick="app.logout()"
-                        class="bg-rose-500/10 text-rose-400 px-6 py-2.5 rounded-xl hover:bg-rose-500/20 transition font-bold text-sm border border-rose-500/30">
+                        class="btn-premium bg-rose-500/10 text-rose-400 px-6 py-2.5 rounded-xl hover:bg-rose-500/20 transition font-bold text-sm border border-rose-500/30">
                         <i class="fas fa-power-off mr-2"></i> Exit
                     </button>
                 </div>
@@ -497,36 +284,42 @@
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
                 <!-- MODULE 1: MANUAL DEPLOY -->
-                <div class="glass-card p-10 rounded-2xl text-center cursor-pointer hover:scale-105 transition-all group border-blue-500/20"
+                <div class="glass-card p-10 rounded-2xl text-center cursor-pointer hover:scale-105 transition-all group border-blue-500/20 relative overflow-hidden"
                     onclick="app.navigateToAddStudent()">
+                    <div class="hud-scanline"></div>
                     <div
-                        class="text-5xl text-blue-400 mb-6 group-hover:drop-shadow-[0_0_15px_rgba(96,165,250,0.5)] transition">
+                        class="text-5xl text-blue-400 mb-6 group-hover:drop-shadow-[0_0_15px_rgba(96,165,250,0.5)] transition relative z-10">
                         <i class="fas fa-plus-circle"></i>
                     </div>
-                    <h3 class="text-xl font-bold text-white uppercase tracking-wider">Deploy Student</h3>
-                    <p class="text-slate-400 text-sm mt-2">Initialize new record in database</p>
+                    <h3 class="text-xl font-bold text-white uppercase tracking-wider relative z-10 font-[Orbitron]">
+                        Deploy Student</h3>
+                    <p class="text-slate-400 text-sm mt-2 relative z-10">Initialize new record in database</p>
                 </div>
 
                 <!-- MODULE 2: NEURAL OCR UPLOAD -->
-                <div class="glass-card p-10 rounded-2xl text-center cursor-pointer hover:scale-105 transition-all group border-purple-500/20 bg-purple-500/5 shadow-[0_0_30px_rgba(168,85,247,0.1)]"
+                <div class="glass-card p-10 rounded-2xl text-center cursor-pointer hover:scale-105 transition-all group border-purple-500/20 bg-purple-500/5 shadow-[0_0_30px_rgba(168,85,247,0.1)] relative overflow-hidden"
                     onclick="app.navigateTo('uploadMarksheetPage')">
+                    <div class="hud-scanline" style="animation-delay: 1s"></div>
                     <div
-                        class="text-5xl text-purple-400 mb-6 group-hover:drop-shadow-[0_0_15px_rgba(192,132,252,0.5)] transition">
+                        class="text-5xl text-purple-400 mb-6 group-hover:drop-shadow-[0_0_15px_rgba(192,132,252,0.5)] transition relative z-10">
                         <i class="fas fa-file-upload"></i>
                     </div>
-                    <h3 class="text-xl font-bold text-white uppercase tracking-wider">Upload Marksheet</h3>
-                    <p class="text-slate-400 text-sm mt-2">Extract data from image files</p>
+                    <h3 class="text-xl font-bold text-white uppercase tracking-wider relative z-10 font-[Orbitron]">
+                        Upload Marksheet</h3>
+                    <p class="text-slate-400 text-sm mt-2 relative z-10">Extract data from image files</p>
                 </div>
 
                 <!-- MODULE 3: DATABASE ACCESS -->
-                <div class="glass-card p-10 rounded-2xl text-center cursor-pointer hover:scale-105 transition-all group border-emerald-500/20"
+                <div class="glass-card p-10 rounded-2xl text-center cursor-pointer hover:scale-105 transition-all group border-emerald-500/20 relative overflow-hidden"
                     onclick="app.loadStudentList()">
+                    <div class="hud-scanline" style="animation-delay: 2s"></div>
                     <div
-                        class="text-5xl text-emerald-400 mb-6 group-hover:drop-shadow-[0_0_15px_rgba(52,211,153,0.5)] transition">
+                        class="text-5xl text-emerald-400 mb-6 group-hover:drop-shadow-[0_0_15px_rgba(52,211,153,0.5)] transition relative z-10">
                         <i class="fas fa-database"></i>
                     </div>
-                    <h3 class="text-xl font-bold text-white uppercase tracking-wider">Access Records</h3>
-                    <p class="text-slate-400 text-sm mt-2">View and manage centralized flux</p>
+                    <h3 class="text-xl font-bold text-white uppercase tracking-wider relative z-10 font-[Orbitron]">
+                        Access Records</h3>
+                    <p class="text-slate-400 text-sm mt-2 relative z-10">View and manage centralized flux</p>
                 </div>
             </div>
         </section>
@@ -574,7 +367,7 @@
                             </div>
                         </div>
                         <button id="extractBtn" onclick="app.processMarksheet()"
-                            class="bg-cyan-600 hover:bg-cyan-500 text-white px-8 py-3 rounded-xl font-bold transition-all text-sm uppercase tracking-widest flex items-center gap-2">
+                            class="btn-premium btn-cyan text-white px-8 py-3 rounded-xl font-bold transition-all text-sm uppercase tracking-widest flex items-center gap-2">
                             <i class="fas fa-brain"></i> Run OCR & Extract Data
                         </button>
                     </div>
@@ -794,7 +587,7 @@
                             Cancel Post
                         </button>
                         <button onclick="app.saveExtractedData()"
-                            class="px-12 py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/40 transition-all text-xs font-bold uppercase tracking-widest flex items-center gap-3">
+                            class="btn-premium bg-emerald-600 hover:bg-emerald-500 text-white px-12 py-4 rounded-xl shadow-lg shadow-emerald-900/40 transition-all text-xs font-bold uppercase tracking-widest flex items-center gap-3">
                             <i class="fas fa-database"></i> Commit to Matrix
                         </button>
                     </div>
@@ -848,7 +641,7 @@
 
                     <div class="flex justify-end gap-4 mt-8 pt-6 border-t border-white/10">
                         <button type="submit"
-                            class="bg-cyan-600 hover:bg-cyan-500 text-white px-10 py-4 rounded-xl shadow-[0_0_20px_rgba(8,145,178,0.3)] transition-all font-bold uppercase tracking-widest text-xs">
+                            class="btn-premium btn-cyan text-white px-10 py-4 rounded-xl shadow-[0_0_20px_rgba(8,145,178,0.3)] transition-all font-bold uppercase tracking-widest text-xs">
                             Commit Registry
                         </button>
                     </div>
@@ -960,7 +753,7 @@
 
                     <div class="flex justify-end gap-4 mt-8 pt-6 border-t border-white/10">
                         <button type="submit"
-                            class="bg-indigo-600 hover:bg-indigo-500 text-white px-10 py-4 rounded-xl shadow-[0_0_20px_rgba(79,70,229,0.3)] transition-all font-bold uppercase tracking-widest text-xs">
+                            class="btn-premium btn-indigo text-white px-10 py-4 rounded-xl shadow-[0_0_20px_rgba(79,70,229,0.3)] transition-all font-bold uppercase tracking-widest text-xs">
                             Update Registry
                         </button>
                     </div>
@@ -1070,7 +863,7 @@
                         <button type="button" class="text-slate-400 hover:text-white text-sm font-medium transition"
                             onclick="app.navigateTo('homePage')">Main Menu</button>
                         <button type="submit"
-                            class="bg-indigo-600 hover:bg-indigo-500 text-white px-10 py-4 rounded-xl shadow-[0_0_20px_rgba(79,70,229,0.3)] transition-all font-bold uppercase tracking-widest text-xs">
+                            class="btn-premium btn-indigo text-white px-10 py-4 rounded-xl shadow-[0_0_20px_rgba(79,70,229,0.3)] transition-all font-bold uppercase tracking-widest text-xs">
                             Sync Identity
                         </button>
                     </div>
@@ -1092,36 +885,30 @@
                             class="font-bold text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.4)]"></span></p>
                 </div>
             </div>
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-8">
-                <button onclick="app.viewMarksheet('semester_1')" class="sem-btn p-8 rounded-2xl text-left">
-                    <span class="sem-number text-3xl font-bold text-cyan-400 block mb-1">01</span>
-                    <span class="sem-label text-slate-400 text-xs uppercase tracking-[0.2em] font-medium">Data
-                        Semester</span>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-6">
+                <button onclick="app.viewMarksheet('semester_1')" class="sem-btn group">
+                    <span class="sem-number text-cyan-400">01</span>
+                    <span class="sem-label">Matrix Node</span>
                 </button>
-                <button onclick="app.viewMarksheet('semester_2')" class="sem-btn p-8 rounded-2xl text-left">
-                    <span class="sem-number text-3xl font-bold text-emerald-400 block mb-1">02</span>
-                    <span class="sem-label text-slate-400 text-xs uppercase tracking-[0.2em] font-medium">Data
-                        Semester</span>
+                <button onclick="app.viewMarksheet('semester_2')" class="sem-btn group">
+                    <span class="sem-number text-emerald-400">02</span>
+                    <span class="sem-label">Matrix Node</span>
                 </button>
-                <button onclick="app.viewMarksheet('semester_3')" class="sem-btn p-8 rounded-2xl text-left">
-                    <span class="sem-number text-3xl font-bold text-amber-400 block mb-1">03</span>
-                    <span class="sem-label text-slate-400 text-xs uppercase tracking-[0.2em] font-medium">Data
-                        Semester</span>
+                <button onclick="app.viewMarksheet('semester_3')" class="sem-btn group">
+                    <span class="sem-number text-amber-400">03</span>
+                    <span class="sem-label">Matrix Node</span>
                 </button>
-                <button onclick="app.viewMarksheet('semester_4')" class="sem-btn p-8 rounded-2xl text-left">
-                    <span class="sem-number text-3xl font-bold text-rose-400 block mb-1">04</span>
-                    <span class="sem-label text-slate-400 text-xs uppercase tracking-[0.2em] font-medium">Data
-                        Semester</span>
+                <button onclick="app.viewMarksheet('semester_4')" class="sem-btn group">
+                    <span class="sem-number text-rose-400">04</span>
+                    <span class="sem-label">Matrix Node</span>
                 </button>
-                <button onclick="app.viewMarksheet('semester_5')" class="sem-btn p-8 rounded-2xl text-left">
-                    <span class="sem-number text-3xl font-bold text-purple-400 block mb-1">05</span>
-                    <span class="sem-label text-slate-400 text-xs uppercase tracking-[0.2em] font-medium">Data
-                        Semester</span>
+                <button onclick="app.viewMarksheet('semester_5')" class="sem-btn group">
+                    <span class="sem-number text-purple-400">05</span>
+                    <span class="sem-label">Matrix Node</span>
                 </button>
-                <button onclick="app.viewMarksheet('semester_6')" class="sem-btn p-8 rounded-2xl text-left">
-                    <span class="sem-number text-3xl font-bold text-pink-400 block mb-1">06</span>
-                    <span class="sem-label text-slate-400 text-xs uppercase tracking-[0.2em] font-medium">Data
-                        Semester</span>
+                <button onclick="app.viewMarksheet('semester_6')" class="sem-btn group">
+                    <span class="sem-number text-pink-400">06</span>
+                    <span class="sem-label">Matrix Node</span>
                 </button>
             </div>
 
@@ -1435,7 +1222,7 @@
     </script>
 
     <!-- Original App Script -->
-    <script src="js/app.js?v=9"></script>
+    <script src="js/app.js?v=10"></script>
 
 </body>
 
