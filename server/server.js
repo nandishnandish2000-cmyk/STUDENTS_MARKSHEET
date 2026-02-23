@@ -248,6 +248,7 @@ async function extractWithGPT(filePath, isPdf = false) {
         3. Subjects Table:
            - Subject Code (e.g., 11T, 12E)
            - Subject Name (Full descriptive name)
+           - Paper Type (Is it CORE, ALLIED, PRACTICAL, or ELECTIVE? Look for these labels or prefixes)
            - Marks (If marks are in "INT+EXT" or "021+039" format, sum them up and return the total)
            - Result (PASS or FAIL, often represented by "P" or "F")
         
@@ -258,6 +259,7 @@ async function extractWithGPT(filePath, isPdf = false) {
           "subjects": [
             {
               "subject": "Full Subject Name (include code if helpful)",
+              "paper_type": "CORE/ALLIED/PRACTICAL/ELECTIVE",
               "marks": "Total obtained (as string)",
               "result": "PASS or FAIL"
             }

@@ -948,7 +948,7 @@ const app = {
         }
     },
 
-    // Simplified 3-column subject row for OCR upload context
+    // Enhanced 4-column subject row for OCR upload context (Subject, Type, Marks, Result)
     addExtractedSubjectRow: (initialData = null) => {
         const container = document.getElementById('extractedSubjectsContainer');
         if (!container) return;
@@ -958,23 +958,35 @@ const app = {
             ? (initialData.marks !== undefined ? initialData.marks : initialData.mark)
             : '';
         const result = (initialData && initialData.result) ? initialData.result : 'PASS';
+        const paperType = (initialData && (initialData.paper_type || initialData.paperType)) ? (initialData.paper_type || initialData.paperType).toUpperCase() : 'CORE';
 
         const div = document.createElement('div');
-        div.className = 'grid grid-cols-[1fr_120px_120px_40px] gap-3 items-center extracted-subject-row';
+        div.className = 'grid grid-cols-[1fr_100px_100px_100px_40px] gap-3 items-center extracted-subject-row mb-3';
         div.innerHTML = `
             <input type="text" placeholder="Subject name (e.g. Mathematics)"
-                class="extracted-subject-name w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all text-sm"
+                class="extracted-subject-name w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all text-sm font-bold"
                 value="${subjectName}">
+            
+            <select class="extracted-subject-type w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-slate-300 transition-all text-[10px] font-bold text-center">
+                <option value="CORE" ${paperType === 'CORE' ? 'selected' : ''}>CORE</option>
+                <option value="ALLIED" ${paperType === 'ALLIED' ? 'selected' : ''}>ALLIED</option>
+                <option value="PRACTICAL" ${paperType === 'PRACTICAL' ? 'selected' : ''}>PRAC</option>
+                <option value="ELECTIVE" ${paperType === 'ELECTIVE' ? 'selected' : ''}>ELEC</option>
+                <option value="NON-MAJOR" ${paperType === 'NON-MAJOR' ? 'selected' : ''}>NME</option>
+            </select>
+
             <input type="number" min="0" placeholder="Marks"
                 class="extracted-subject-marks w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all text-sm text-center font-mono font-bold"
                 value="${marks}">
+            
             <select class="extracted-subject-result w-full bg-slate-900 border border-slate-700 rounded-xl p-3 font-bold transition-all text-sm ${result === 'PASS' ? 'text-emerald-400' : 'text-rose-400'}"
                 onchange="this.className = 'extracted-subject-result w-full bg-slate-900 border border-slate-700 rounded-xl p-3 font-bold transition-all text-sm ' + (this.value === 'PASS' ? 'text-emerald-400' : 'text-rose-400')">
                 <option value="PASS" ${result === 'PASS' ? 'selected' : ''} style="color:#34d399">PASS</option>
                 <option value="FAIL" ${result === 'FAIL' ? 'selected' : ''} style="color:#f87171">FAIL</option>
             </select>
-            <button type="button" onclick="this.parentElement.remove()" class="text-rose-500 hover:text-rose-400 transition flex-shrink-0">
-                <i class="fas fa-trash-alt"></i>
+            
+            <button type="button" onclick="this.parentElement.remove()" class="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 transition flex items-center justify-center">
+                <i class="fas fa-trash-alt text-xs"></i>
             </button>
         `;
         container.appendChild(div);
@@ -1033,6 +1045,7 @@ const app = {
         rows.forEach(row => {
             if (rowError) return;
             const subjectName = (row.querySelector('.extracted-subject-name').value || '').trim();
+            const paperType = row.querySelector('.extracted-subject-type').value;
             const marks = row.querySelector('.extracted-subject-marks').value;
             const result = row.querySelector('.extracted-subject-result').value;
 
@@ -1043,8 +1056,8 @@ const app = {
             subjects.push({
                 name: subjectName,
                 mark: parseInt(marks),
-                paper_type: 'CORE',
-                overall_max_marks: 100,
+                paper_type: paperType,
+                overall_max_marks: 75, // Default for BU
                 internal_marks: 0,
                 result
             });
