@@ -96,83 +96,46 @@
         /* Overlay Text Styles */
         #portal-title {
             position: fixed;
-            top: 5%;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 10;
-            text-align: center;
-            width: 100%;
+            top: 25px;
+            right: 35px;
+            z-index: 60;
+            text-align: right;
             pointer-events: none;
             opacity: 0;
-            transition: opacity 1.5s ease-out;
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        #portal-subtitle {
-            position: fixed;
-            bottom: 5%;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 10;
-            text-align: center;
-            width: 100%;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 1.5s ease-out;
-        }
-
-        #portal-title.visible,
-        #portal-subtitle.visible {
+        #portal-title.visible {
             opacity: 1;
+        }
+
+        #portal-title.hidden-title {
+            opacity: 0 !important;
+            transform: translateX(30px);
         }
 
         .title-main {
             font-family: 'Orbitron', sans-serif;
-            font-size: 2.8rem;
+            font-size: 1.1rem;
             font-weight: 700;
             color: #ffffff;
             letter-spacing: 0.15em;
-            line-height: 1.2;
-            text-shadow: 0 0 30px rgba(0, 200, 255, 0.4);
-            background: linear-gradient(to bottom, #ffffff 40%, #a5f3fc 100%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            line-height: 1;
         }
 
         .highlight-text {
-            font-size: 0.8em;
-            color: #a5f3fc;
-            display: block;
-            margin-top: 5px;
-        }
-
-        .title-sub {
             font-family: 'Rajdhani', sans-serif;
-            font-size: 1.1rem;
-            color: #94a3b8;
+            font-size: 0.65rem;
+            color: #22d3ee;
             letter-spacing: 0.4em;
+            display: block;
+            margin-top: 4px;
             text-transform: uppercase;
-            position: relative;
-            display: inline-block;
+            font-weight: 500;
+            opacity: 0.9;
         }
 
-        .title-sub::before,
-        .title-sub::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            width: 40px;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.5), transparent);
-        }
-
-        .title-sub::before {
-            left: -55px;
-        }
-
-        .title-sub::after {
-            right: -55px;
-        }
 
         /* Custom Scrollbar for OCR List */
         .custom-scrollbar::-webkit-scrollbar {
@@ -339,16 +302,10 @@
         <div id="spline-watermark-cover"></div>
     </div>
 
-    <!-- Custom Title Overlays -->
+    <!-- Custom Title Overlay (Top Right) -->
     <div id="portal-title">
-        <div class="title-main">
-            STUDENTS MARKSHEET<br>
-            <span class="highlight-text">WEB - PORTAL</span>
-        </div>
-    </div>
-
-    <div id="portal-subtitle">
-        <div class="title-sub">ADVANCED MANAGEMENT SYSTEM</div>
+        <span class="title-main">Students Marksheet</span>
+        <span class="highlight-text">Web - Portal</span>
     </div>
 
     <!-- Navbar -->
@@ -370,10 +327,7 @@
 
         <!-- 1. HOME PAGE -->
         <section id="homePage" class="view-section fade-in flex flex-col items-center justify-center h-full mt-24">
-            <!-- Central Welcome -->
-            <div class="text-center mb-16">
-                <h2 class="text-4xl font-bold mb-4 text-white">Welcome</h2>
-            </div>
+            <!-- Branding and Navigation -->
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl px-4">
                 <!-- Student Portal Card -->
@@ -1323,7 +1277,7 @@
     </script>
 
     <!-- Original App Script -->
-    <script src="js/app.js?v=11"></script>
+    <script src="js/app.js?v=12"></script>
 
 </body>
 

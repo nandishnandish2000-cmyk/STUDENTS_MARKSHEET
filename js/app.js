@@ -23,6 +23,16 @@ const app = {
             target.classList.add('fade-in');
         }
 
+        // Toggle portal title (only show on Home Page)
+        const portalTitle = document.getElementById('portal-title');
+        if (portalTitle) {
+            if (viewId === 'homePage') {
+                portalTitle.classList.remove('hidden-title');
+            } else {
+                portalTitle.classList.add('hidden-title');
+            }
+        }
+
         // Toggle global logout button based on view
         const logoutBtn = document.getElementById('globalLogoutBtn');
         if (viewId === 'homePage' || viewId === 'adminLogin' || viewId === 'studentLogin') {
