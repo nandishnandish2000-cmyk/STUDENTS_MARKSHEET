@@ -344,9 +344,6 @@ const app = {
                 const tbody = document.getElementById('viewStudentSubjectsBody');
                 tbody.innerHTML = '';
 
-                let totalObtained = 0;
-                let totalMaxMarks = 0;
-                let hasFailResult = false;
 
                 student.subjects.forEach(sub => {
                     const paperType = sub.paper_type || 'CORE';
@@ -355,14 +352,6 @@ const app = {
                     const external = sub.mark;
                     const total = internal + external;
                     const maxTotal = overallMax + 25;
-
-                    // Overall Calculation (Trust the DB, but sum for the summary boxes)
-                    if (paperType !== 'NON') {
-                        totalObtained += total;
-                        totalMaxMarks += maxTotal;
-                    }
-
-                    if (statusText.startsWith("F")) hasFailResult = true;
 
                     // Result Logic - THE ULTIMATE DATA MIRROR (ADMIN VIEW)
                     const statusText = (sub.result || "").toString().trim().toUpperCase();
@@ -389,23 +378,7 @@ const app = {
                     tbody.appendChild(tr);
                 });
 
-                // Populate Admin Analysis Summary
-                const percentage = totalMaxMarks > 0 ? (totalObtained / totalMaxMarks) * 100 : 0;
-                document.getElementById('viewStudentPercentage').textContent = percentage.toFixed(2) + '%';
 
-                let grade = 'Fail';
-                if (hasFailResult) {
-                    grade = 'Fail';
-                } else {
-                    if (percentage >= 90) grade = 'A';
-                    else if (percentage >= 75) grade = 'B';
-                    else if (percentage >= 60) grade = 'C';
-                    else if (percentage >= 50) grade = 'D';
-                }
-                const gradeEl = document.getElementById('viewStudentGrade');
-                gradeEl.textContent = grade;
-                if (grade === 'Fail') gradeEl.className = 'text-4xl font-black text-rose-500 font-[Orbitron]';
-                else gradeEl.className = 'text-4xl font-black text-emerald-400 font-[Orbitron]';
 
             } else {
                 app.showToast('Student not found', 'error');
