@@ -96,44 +96,52 @@
         /* Overlay Text Styles */
         #portal-title {
             position: fixed;
-            top: 25px;
-            right: 35px;
-            z-index: 60;
+            top: 20px;
+            right: 25px;
+            z-index: 100;
             text-align: right;
             pointer-events: none;
             opacity: 0;
-            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(8px);
+            padding: 10px 18px;
+            border-radius: 12px;
+            border: 1px solid rgba(34, 211, 238, 0.2);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
         }
 
         #portal-title.visible {
             opacity: 1;
+            transform: translateY(0);
         }
 
         #portal-title.hidden-title {
             opacity: 0 !important;
-            transform: translateX(30px);
+            transform: translateY(-15px) translateX(10px);
         }
 
         .title-main {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.1rem;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
             font-weight: 700;
             color: #ffffff;
-            letter-spacing: 0.15em;
+            letter-spacing: 0.1em;
             text-transform: uppercase;
-            line-height: 1;
+            line-height: 1.2;
+            display: block;
         }
 
         .highlight-text {
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 0.65rem;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.6rem;
             color: #22d3ee;
-            letter-spacing: 0.4em;
+            letter-spacing: 0.3em;
             display: block;
-            margin-top: 4px;
             text-transform: uppercase;
-            font-weight: 500;
-            opacity: 0.9;
+            font-weight: 600;
+            opacity: 0.8;
+            margin-top: 2px;
         }
 
 
@@ -1277,7 +1285,7 @@
     </script>
 
     <!-- Original App Script -->
-    <script src="js/app.js?v=12"></script>
+    <script src="js/app.js?v=13"></script>
 
 </body>
 
