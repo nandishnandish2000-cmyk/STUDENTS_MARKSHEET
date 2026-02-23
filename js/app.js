@@ -551,8 +551,10 @@ const app = {
                     const subMaxTotal = overallMax + 25;
 
                     // Result Logic - STRICTLY use data from DB to avoid mismatch
-                    const resultText = (sub.result && sub.result.length > 0) ? sub.result : (subTotal >= (subMaxTotal * 0.40) ? 'PASS' : 'FAIL');
-                    const isPass = resultText.toUpperCase().includes('PASS');
+                    // Normalize the input from DB (it might be "PASS", "P", "PASS.", etc.)
+                    const rawResult = (sub.result || "").toUpperCase().trim();
+                    const isPass = rawResult.includes("PASS") || rawResult === "P" || rawResult === "P.";
+                    const resultText = isPass ? "PASS" : "FAIL";
                     const resultClass = isPass ? 'text-emerald-400' : 'text-rose-400';
                     if (!isPass) hasFail = true;
 
@@ -567,10 +569,10 @@ const app = {
                     tr.innerHTML = `
                         <td class="text-left py-4 pl-6 text-white font-bold tracking-wide">${sub.name}</td>
                         <td class="text-left py-4 px-6"><span class="text-[10px] font-bold px-3 py-1 rounded-lg border ${paperType === 'CORE' ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' : 'bg-slate-500/20 text-slate-300 border-slate-500/30'}">${paperType}</span></td>
+                        <td class="text-center py-4 text-slate-500 font-mono">${subMaxTotal}</td>
                         <td class="text-center py-4 text-slate-300 font-mono">${internal}</td>
                         <td class="text-center py-4 text-slate-300 font-mono">${external}</td>
                         <td class="text-center py-4 font-black text-white font-mono">${subTotal}</td>
-                        <td class="text-center py-4 text-slate-500 font-mono">${subMaxTotal}</td>
                          <td class="text-center py-4 font-black ${resultClass} tracking-widest">${resultText}</td>
                     `;
                     tbody.appendChild(tr);
