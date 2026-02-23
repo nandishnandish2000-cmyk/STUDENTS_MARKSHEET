@@ -349,27 +349,28 @@ const app = {
                     const internal = sub.internal_marks || 0;
                     const external = sub.mark;
                     const total = internal + external;
-                    // Result Logic: Total > 40% of Max Total (Max + 25) ?
-                    // Actually, Max Total = overallMax + 25.
-                    // Pass if total >= 0.4 * (overallMax + 25) ?? 
-                    // Or usually 35/40 or 50. Let's use 40% of max subject total.
-                    const maxSubjectTotal = overallMax + 25;
-                    const isPass = total >= (maxSubjectTotal * 0.40);
-                    const resultText = isPass ? 'PASS' : 'FAIL';
-                    const resultClass = isPass ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 'text-rose-400 bg-rose-500/10 border-rose-500/20';
+                    const maxTotal = overallMax + 25;
+
+                    // Result Logic - THE ULTIMATE DATA MIRROR (ADMIN VIEW)
+                    const statusText = (sub.result || "").toString().trim().toUpperCase();
+                    const isFail = statusText.startsWith("F");
+                    const statusClass = isFail ? "text-rose-400 bg-rose-500/10 border-rose-500/20" : "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
 
                     const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-white/[0.02] transition-colors';
                     tr.innerHTML = `
                         <td class="px-6 py-5 whitespace-nowrap text-sm font-bold text-white tracking-wide">${sub.name}</td>
-                        <td class="px-6 py-5 whitespace-nowrap text-sm text-slate-400">
-                            <span class="px-3 py-1 text-[10px] font-bold rounded-lg border border-white/10 ${paperType === 'CORE' ? 'bg-indigo-500/20 text-indigo-300' : 'bg-slate-500/20 text-slate-300'}">${paperType}</span>
+                        <td class="px-6 py-5 whitespace-nowrap text-sm">
+                             <span class="px-2.5 py-1 text-[9px] font-black rounded border border-white/10 ${paperType === 'CORE' ? 'bg-indigo-500/20 text-indigo-300' : (paperType === 'PRAC' || paperType === 'PRACTICAL' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-500/20 text-slate-300')} tracking-widest uppercase">
+                                ${paperType === 'NON' ? 'NON' : (paperType === 'CORE' ? 'COR' : paperType.substring(0, 3).toUpperCase())}
+                             </span>
                         </td>
-                        <td class="px-6 py-5 whitespace-nowrap text-sm text-slate-300 text-center font-mono">${overallMax}</td>
+                        <td class="px-6 py-5 whitespace-nowrap text-sm text-slate-300 text-center font-mono">${maxTotal}</td>
                         <td class="px-6 py-5 whitespace-nowrap text-sm text-slate-300 text-center font-mono">${internal}</td>
                         <td class="px-6 py-5 whitespace-nowrap text-sm text-cyan-400 text-center font-bold font-mono">${external}</td>
                         <td class="px-6 py-5 whitespace-nowrap text-sm text-white text-center font-black font-mono shadow-[0_0_10px_rgba(255,255,255,0.1)]">${total}</td>
                         <td class="px-6 py-5 whitespace-nowrap text-sm font-black text-center">
-                            <span class="px-3 py-1 rounded-lg border ${resultClass}">${resultText}</span>
+                            <span class="px-4 py-1.5 rounded-lg border text-[10px] tracking-widest shadow-lg ${statusClass}">${statusText || '—'}</span>
                         </td>
                     `;
                     tbody.appendChild(tr);
