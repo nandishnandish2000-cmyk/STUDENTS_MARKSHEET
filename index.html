@@ -51,12 +51,14 @@
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: -10;
+            z-index: 1;
+            /* Above body, below main */
             background: #000000;
             opacity: 1;
             visibility: visible;
             transition: opacity 1.5s ease-in-out;
-            pointer-events: none;
+            pointer-events: auto !important;
+            /* Allow interaction with robot */
         }
 
 
@@ -67,7 +69,8 @@
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: -5;
+            z-index: 2;
+            pointer-events: auto !important;
         }
 
         /* Additional Spline watermark hiding via CSS */
@@ -165,6 +168,29 @@
         }
 
         /* Glassmorphism for cards to show background */
+        /* Compact Horizontal Modules at Bottom */
+        .compact-module {
+            background: rgba(15, 23, 42, 0.4) !important;
+            backdrop-filter: blur(16px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            padding: 16px 24px !important;
+            border-radius: 16px !important;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            min-width: 280px;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .compact-module:hover {
+            background: rgba(30, 41, 59, 0.6) !important;
+            border-color: rgba(34, 211, 238, 0.3) !important;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
         .glass-card {
             background: rgba(15, 23, 42, 0.6) !important;
             backdrop-filter: blur(12px) !important;
@@ -173,14 +199,7 @@
             pointer-events: auto !important;
         }
 
-        /* Home Page Module Animation */
-        #homePage .glass-card {
-            opacity: 0;
-            transform: translateY(30px);
-            transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1), transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        #homePage .glass-card.visible {
+        .compact-module.visible {
             opacity: 1;
             transform: translateY(0);
         }
@@ -200,6 +219,7 @@
         button,
         a,
         .glass-card,
+        .compact-module,
         select,
         textarea,
         [onclick],
@@ -334,34 +354,33 @@
         </div>
 
         <!-- 1. HOME PAGE -->
-        <section id="homePage" class="view-section fade-in flex flex-col items-center justify-center h-full mt-24">
-            <!-- Branding and Navigation -->
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl px-4">
-                <!-- Student Portal Card -->
-                <div class="glass-card p-10 rounded-2xl shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer group text-center"
-                    onclick="app.navigateTo('studentLogin')">
+        <section id="homePage"
+            class="view-section fade-in flex flex-col items-center justify-end h-[calc(100vh-100px)] pb-12">
+            <div class="flex flex-col md:flex-row gap-6 w-full max-w-5xl justify-center px-4">
+                <!-- Student Portal -->
+                <div class="compact-module cursor-pointer group" onclick="app.navigateTo('studentLogin')">
                     <div
-                        class="w-20 h-20 mx-auto rounded-full bg-cyan-500/10 flex items-center justify-center mb-6 group-hover:bg-cyan-500/20 transition duration-500">
-                        <i class="fas fa-user-graduate text-4xl text-cyan-400"></i>
+                        class="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center group-hover:bg-cyan-500/20 transition duration-300">
+                        <i class="fas fa-graduation-cap text-xl text-cyan-400"></i>
                     </div>
-                    <h3 class="text-2xl font-bold mb-2 text-white group-hover:text-cyan-400 transition">Student Portal
-                    </h3>
-                    <p class="text-slate-300 text-sm opacity-80 group-hover:opacity-100 transition">Access your academic
-                        records</p>
+                    <div>
+                        <h3 class="text-sm font-bold text-white group-hover:text-cyan-400 transition">Student Access
+                        </h3>
+                        <p class="text-[10px] text-slate-400 leading-tight">View academic marksheet</p>
+                    </div>
                 </div>
 
-                <!-- Admin Portal Card -->
-                <div class="glass-card p-10 rounded-2xl shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer group text-center"
-                    onclick="app.navigateTo('adminLogin')">
+                <!-- Admin Portal -->
+                <div class="compact-module cursor-pointer group" onclick="app.navigateTo('adminLogin')">
                     <div
-                        class="w-20 h-20 mx-auto rounded-full bg-purple-500/10 flex items-center justify-center mb-6 group-hover:bg-purple-500/20 transition duration-500">
-                        <i class="fas fa-user-shield text-4xl text-purple-400"></i>
+                        class="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center group-hover:bg-purple-500/20 transition duration-300">
+                        <i class="fas fa-shield-halved text-xl text-purple-400"></i>
                     </div>
-                    <h3 class="text-2xl font-bold mb-2 text-white group-hover:text-purple-400 transition">Admin Portal
-                    </h3>
-                    <p class="text-slate-300 text-sm opacity-80 group-hover:opacity-100 transition">Manage student
-                        records</p>
+                    <div>
+                        <h3 class="text-sm font-bold text-white group-hover:text-purple-400 transition">Admin Control
+                        </h3>
+                        <p class="text-[10px] text-slate-400 leading-tight">Database management</p>
+                    </div>
                 </div>
             </div>
         </section>
@@ -1273,7 +1292,7 @@
                 if (title) title.classList.add('visible');
                 if (subtitle) subtitle.classList.add('visible');
 
-                const homeModules = document.querySelectorAll('#homePage .glass-card');
+                const homeModules = document.querySelectorAll('#homePage .compact-module');
                 homeModules.forEach((mod, index) => {
                     setTimeout(() => {
                         mod.classList.add('visible');
@@ -1285,7 +1304,7 @@
     </script>
 
     <!-- Original App Script -->
-    <script src="js/app.js?v=13"></script>
+    <script src="js/app.js?v=16"></script>
 
 </body>
 
