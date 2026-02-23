@@ -343,7 +343,7 @@ app.get('/api/students/:semester', async (req, res) => {
         const [students] = await db.query('SELECT * FROM students WHERE semester = ?', [req.params.semester]);
         const studentsWithMarks = await Promise.all(students.map(async (s) => {
             const [marks] = await db.query(
-                'SELECT subject_name as name, mark, paper_type, overall_max_marks, internal_marks FROM marks WHERE student_id = ?',
+                'SELECT subject_name as name, mark, paper_type, overall_max_marks, internal_marks, result FROM marks WHERE student_id = ?',
                 [s.id]
             );
             return {
@@ -484,10 +484,16 @@ app.get('/api/student/overall/:regNo', async (req, res) => {
             [req.params.regNo.trim()]
         );
         if (students.length === 0) return res.status(404).json({ success: false, message: 'No records found' });
-        const history = await Promise.all(students.map(async (s) => {
-            const [marks] = await db.query('SELECT subject_name as name, mark, paper_type, overall_max_marks, internal_marks FROM marks WHERE student_id = ?', [s.id]);
-            return { semester: s.semester, subjects: marks };
-        }));
+
+        // The original code already included 'result' in the marks query.
+        // The instruction implies a structural change to how history is built.
+        // Reconstructing history to match the implied structure from the snippet.
+        const history = [];
+        for (const s of students) {
+            const [marks] = await db.query('SELECT subject_name as name, mark, paper_type, overall_max_marks, internal_marks, result FROM marks WHERE student_id = ?', [s.id]);
+            history.push({ semester: s.semester, subjects: marks });
+        }
+
         res.json({ success: true, studentName: students[0].name, regNo: students[0].reg_no, history });
     } catch (err) {
         console.error(err);
@@ -505,7 +511,7 @@ app.get('/api/student/:semester/:regNo', async (req, res) => {
         );
         if (students.length === 0) return res.status(404).json({ success: false, message: `No record found for Semester: ${semester.replace('_', ' ')}` });
         const student = students[0];
-        const [marks] = await db.query('SELECT subject_name as name, mark, paper_type, overall_max_marks, internal_marks FROM marks WHERE student_id = ?', [student.id]);
+        const [marks] = await db.query('SELECT subject_name as name, mark, paper_type, overall_max_marks, internal_marks, result FROM marks WHERE student_id = ?', [student.id]);
         res.json({ success: true, student: { name: student.name, regNo: student.reg_no, subjects: marks } });
     } catch (err) {
         console.error(err);
