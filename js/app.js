@@ -189,7 +189,7 @@ const app = {
                     <option value="P." ${result === 'P.' ? 'selected' : ''} style="color:#34d399">P.</option>
                 </select>
             </div>` : ''}
-            <button type="button" onclick="this.parentElement.remove()" class="text-rose-500 hover:text-rose-400 p-3 mb-1 transition-colors flex-shrink-0"><i class="fas fa-trash-alt"></i></button>
+            <button type="button" onclick="this.parentElement.remove()" class="text-rose-500 hover:text-rose-400 p-3 mb-1 transition-colors flex-shrink-0"><i class="fas fa-microchip-slash"></i></button>
         `;
         container.appendChild(div);
     },
