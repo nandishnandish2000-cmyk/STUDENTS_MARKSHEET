@@ -27,20 +27,32 @@
     <script type="module" src="https://unpkg.com/@splinetool/viewer@1.12.37/build/spline-viewer.js"></script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+
+        :root {
+            --primary-cyan: #22d3ee;
+            --primary-purple: #a855f7;
+            --primary-emerald: #10b981;
+            --bg-dark: #020617;
+            --glass-bg: rgba(15, 23, 42, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
 
         .fade-in {
-            animation: fadeIn 0.3s ease-in-out;
+            animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
         @keyframes fadeIn {
             from {
                 opacity: 0;
+                transform: translateY(10px);
             }
 
             to {
                 opacity: 1;
+                transform: translateY(0);
             }
         }
 
@@ -52,10 +64,8 @@
             width: 100vw;
             height: 100vh;
             z-index: -5;
-            /* Behind content but high enough to be prime */
             background: #000000;
             pointer-events: auto !important;
-            /* ENABLE MOUSE CAPTURE */
         }
 
         #robot-spline {
@@ -63,8 +73,6 @@
             height: 100%;
             pointer-events: auto !important;
         }
-
-
 
         spline-viewer {
             position: absolute;
@@ -76,63 +84,60 @@
             pointer-events: auto !important;
         }
 
-        /* Additional Spline watermark hiding via CSS */
+        /* Hide Spline Logo */
         spline-viewer::part(logo),
         spline-viewer [id*="logo"],
-        spline-viewer a[href*="spline"],
-        #robot-spline::part(logo) {
+        spline-viewer a[href*="spline"] {
             display: none !important;
             visibility: hidden !important;
-            opacity: 0 !important;
         }
 
-        /* Watermark Cover Element - Solid cover to hide badge */
         #spline-watermark-cover {
             position: fixed;
             bottom: 0;
             right: 0;
             width: 260px;
             height: 70px;
-            /* Solid color matching the Spline scene's bottom-right corner */
             background: #000000;
             z-index: 20;
             pointer-events: none;
         }
 
-        /* Overlay Text Styles */
-        @keyframes holographic-pulse {
-            0% {
-                text-shadow: 0 0 10px rgba(34, 211, 238, 0.4);
-                opacity: 0.9;
-            }
-
-            50% {
-                text-shadow: 0 0 25px rgba(34, 211, 238, 0.8), 0 0 45px rgba(34, 211, 238, 0.3);
-                opacity: 1;
-            }
-
-            100% {
-                text-shadow: 0 0 10px rgba(34, 211, 238, 0.4);
-                opacity: 0.9;
-            }
-        }
-
+        /* --- HUD TITLE DESIGN --- */
         #portal-title {
             position: fixed;
-            top: 40px;
-            left: 40px;
+            top: 50px;
+            left: 50px;
             z-index: 100;
             text-align: left;
             pointer-events: none;
             opacity: 0;
-            transform: translateY(-10px);
+            transform: translateX(-20px);
             transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
-            background: transparent;
-            /* Removed outline/badge background as requested */
-            padding: 0;
-            border: none !important;
-            /* REMOVED OUTLINE */
-            animation: holographic-pulse 3s infinite ease-in-out;
+            padding: 15px 25px;
+            border-left: 4px solid var(--primary-cyan);
+            background: linear-gradient(90deg, rgba(34, 211, 238, 0.1) 0%, transparent 100%);
+            backdrop-filter: blur(5px);
+        }
+
+        #portal-title::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 20px;
+            height: 1px;
+            background: var(--primary-cyan);
+        }
+
+        #portal-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 20px;
+            height: 1px;
+            background: var(--primary-cyan);
         }
 
         #portal-title.visible {
@@ -142,87 +147,109 @@
 
         #portal-title.hidden-title {
             opacity: 0 !important;
-            transform: translateX(-30px);
+            transform: translateX(-40px);
         }
 
         .title-main {
-            font-family: 'Inter', sans-serif;
-            font-size: 1.5rem;
-            font-weight: 900;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 800;
             color: #ffffff;
-            letter-spacing: 0.2em;
+            letter-spacing: 0.15em;
             text-transform: uppercase;
             line-height: 1.1;
             display: block;
+            text-shadow: 0 0 20px rgba(34, 211, 238, 0.5);
         }
 
         .highlight-text {
-            font-family: 'Inter', sans-serif;
-            font-size: 0.9rem;
-            color: #22d3ee;
-            letter-spacing: 0.6em;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.85rem;
+            color: var(--primary-cyan);
+            letter-spacing: 0.5em;
             display: block;
             text-transform: uppercase;
-            font-weight: 600;
-            opacity: 1;
-            margin-top: 6px;
+            font-weight: 700;
+            margin-top: 8px;
+            opacity: 0.8;
         }
 
-
-        /* Custom Scrollbar for OCR List */
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(6, 182, 212, 0.3);
-            border-radius: 10px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: rgba(6, 182, 212, 0.5);
-        }
-
-        /* Glassmorphism for cards to show background */
-        /* Larger Modules for Center Display */
+        /* --- MODERN SCIFI MODULES --- */
         .compact-module {
-            background: rgba(15, 23, 42, 0.5) !important;
-            backdrop-filter: blur(20px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.15) !important;
-            padding: 30px 45px !important;
-            border-radius: 24px !important;
+            background: rgba(15, 23, 42, 0.4) !important;
+            backdrop-filter: blur(25px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            padding: 35px 50px !important;
+            border-radius: 20px !important;
             display: flex;
             align-items: center;
-            gap: 25px;
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            min-width: 350px;
+            gap: 30px;
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            min-width: 380px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .compact-module::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(34, 211, 238, 0.1) 0%, transparent 70%);
             opacity: 0;
-            transform: translateY(40px);
+            transition: opacity 0.5s ease;
         }
 
         .compact-module:hover {
-            background: rgba(30, 41, 59, 0.8) !important;
-            border-color: rgba(34, 211, 238, 0.5) !important;
-            transform: translateY(-12px) scale(1.05);
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.7);
+            background: rgba(15, 23, 42, 0.6) !important;
+            border-color: var(--primary-cyan) !important;
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), 0 0 20px rgba(34, 211, 238, 0.2);
+        }
+
+        .compact-module:hover::before {
+            opacity: 1;
         }
 
         .glass-card {
-            background: rgba(15, 23, 42, 0.6) !important;
-            backdrop-filter: blur(12px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            background: rgba(15, 23, 42, 0.65) !important;
+            backdrop-filter: blur(15px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            border-radius: 20px !important;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
             color: white !important;
-            pointer-events: auto !important;
         }
 
-        .compact-module.visible {
-            opacity: 1;
-            transform: translateY(0);
+        /* --- BUTTONS --- */
+        .btn-sci-fi {
+            position: relative;
+            padding: 12px 28px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: white;
+            background: rgba(34, 211, 238, 0.1);
+            border: 1px solid var(--primary-cyan);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .btn-sci-fi:hover {
+            background: var(--primary-cyan);
+            color: black;
+            box-shadow: 0 0 20px rgba(34, 211, 238, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .glow-icon {
+            filter: drop-shadow(0 0 8px currentColor);
         }
 
         /* Essential layering fix for mouse interaction */
@@ -233,7 +260,6 @@
             pointer-events: none !important;
         }
 
-        /* Elements that MUST be clickable */
         input,
         button,
         a,
@@ -244,6 +270,44 @@
         [onclick],
         .sem-btn {
             pointer-events: auto !important;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary-cyan);
+            border-radius: 10px;
+        }
+
+        /* Scanner Effect */
+        @keyframes scan {
+            0% {
+                top: -100%;
+            }
+
+            100% {
+                top: 100%;
+            }
+        }
+
+        .scanner-line {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary-cyan), transparent);
+            z-index: 1000;
+            opacity: 0.2;
+            pointer-events: none;
+            animation: scan 4s linear infinite;
         }
 
         /* Global Theme Overrides */
@@ -336,6 +400,9 @@
 
 <body class="bg-black font-sans antialiased text-white min-h-screen flex flex-col overflow-x-hidden">
 
+    <!-- HUD Scanner Overlay -->
+    <div class="scanner-line"></div>
+
 
     <!-- Background Container -->
     <div id="spline-bg">
@@ -360,7 +427,7 @@
         <div class="container mx-auto px-4 py-3 flex justify-end items-center">
             <!-- Branding removed as requested -->
             <button id="globalLogoutBtn"
-                class="hidden bg-indigo-700 hover:bg-indigo-800 px-4 py-1.5 rounded text-sm font-medium transition duration-200 border border-indigo-500">
+                class="hidden btn-sci-fi !px-4 !py-1.5 !text-[10px] !border-rose-500/50 !text-rose-400">
                 Logout
             </button>
         </div>
@@ -379,26 +446,30 @@
                 <!-- Student Portal -->
                 <div class="compact-module cursor-pointer group" onclick="app.navigateTo('studentLogin')">
                     <div
-                        class="w-16 h-16 rounded-2xl bg-cyan-500/10 flex items-center justify-center group-hover:bg-cyan-500/20 transition duration-300">
-                        <i class="fas fa-graduation-cap text-3xl text-cyan-400"></i>
+                        class="w-16 h-16 rounded-2xl bg-cyan-500/10 flex items-center justify-center group-hover:bg-cyan-500/20 transition duration-300 border border-cyan-500/20">
+                        <i class="fas fa-user-graduate text-3xl text-cyan-400 glow-icon"></i>
                     </div>
                     <div>
-                        <h3 class="text-xl font-bold text-white group-hover:text-cyan-400 transition">Student Portal
+                        <h3 class="text-xl font-bold text-white group-hover:text-cyan-400 transition font-[Orbitron]">
+                            Student Portal
                         </h3>
-                        <p class="text-sm text-slate-400">Access academic marksheet</p>
+                        <p class="text-xs text-slate-400 tracking-wider font-[Rajdhani] uppercase mt-1">Access Neural
+                            Records</p>
                     </div>
                 </div>
 
                 <!-- Admin Portal -->
                 <div class="compact-module cursor-pointer group" onclick="app.navigateTo('adminLogin')">
                     <div
-                        class="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center group-hover:bg-purple-500/20 transition duration-300">
-                        <i class="fas fa-shield-halved text-3xl text-purple-400"></i>
+                        class="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center group-hover:bg-purple-500/20 transition duration-300 border border-purple-500/20">
+                        <i class="fas fa-terminal text-3xl text-purple-400 glow-icon"></i>
                     </div>
                     <div>
-                        <h3 class="text-xl font-bold text-white group-hover:text-purple-400 transition">Admin Control
+                        <h3 class="text-xl font-bold text-white group-hover:text-purple-400 transition font-[Orbitron]">
+                            Command Hub
                         </h3>
-                        <p class="text-sm text-slate-400">Database management</p>
+                        <p class="text-xs text-slate-400 tracking-wider font-[Rajdhani] uppercase mt-1">Matrix
+                            Management</p>
                     </div>
                 </div>
             </div>
@@ -423,12 +494,14 @@
                             class="w-full bg-slate-900/50 border-slate-700/50 rounded-xl shadow-sm focus:ring-cyan-500 focus:border-cyan-500 p-4 border text-white transition-all font-bold"
                             placeholder="••••••••" required>
                     </div>
-                    <div class="flex justify-between items-center pt-4">
-                        <button type="button" class="text-slate-400 hover:text-white text-sm font-medium transition"
-                            onclick="app.navigateTo('homePage')">Back</button>
-                        <button type="submit"
-                            class="bg-blue-600 hover:bg-blue-500 text-white px-10 py-3.5 rounded-xl shadow-[0_0_15px_rgba(37,99,235,0.4)] transition-all font-bold tracking-widest uppercase text-xs">
-                            Verify Port
+                    <div class="flex justify-between items-center pt-8">
+                        <button type="button"
+                            class="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest transition"
+                            onclick="app.navigateTo('homePage')">
+                            <i class="fas fa-chevron-left mr-2"></i> Back
+                        </button>
+                        <button type="submit" class="btn-sci-fi">
+                            Authenticate
                         </button>
                     </div>
                 </form>
@@ -490,11 +563,11 @@
                 </div>
                 <div class="flex gap-4">
                     <button onclick="app.loadStudentList()"
-                        class="bg-cyan-500/10 text-cyan-400 px-6 py-2.5 rounded-xl hover:bg-cyan-500/20 transition font-bold text-sm border border-cyan-500/30">
+                        class="btn-sci-fi !px-6 !py-2 !text-[10px] !border-cyan-500/50 !bg-cyan-500/5">
                         <i class="fas fa-sync-alt mr-2"></i> Sync
                     </button>
                     <button onclick="app.logout()"
-                        class="bg-rose-500/10 text-rose-400 px-6 py-2.5 rounded-xl hover:bg-rose-500/20 transition font-bold text-sm border border-rose-500/30">
+                        class="btn-sci-fi !px-6 !py-2 !text-[10px] !border-rose-500/50 !bg-rose-500/5 !text-rose-400 hover:!bg-rose-500 hover:!text-black">
                         <i class="fas fa-power-off mr-2"></i> Exit
                     </button>
                 </div>
@@ -578,9 +651,8 @@
                                 <p id="fileSize" class="text-slate-400 text-xs mt-0.5"></p>
                             </div>
                         </div>
-                        <button id="extractBtn" onclick="app.processMarksheet()"
-                            class="bg-cyan-600 hover:bg-cyan-500 text-white px-8 py-3 rounded-xl font-bold transition-all text-sm uppercase tracking-widest flex items-center gap-2">
-                            <i class="fas fa-brain"></i> Run OCR & Extract Data
+                        <button id="extractBtn" onclick="app.processMarksheet()" class="btn-sci-fi">
+                            <i class="fas fa-brain mr-2"></i> Run OCR Analysis
                         </button>
                     </div>
                     <!-- Thumbnail preview in step 1 -->
@@ -811,50 +883,53 @@
 
 
         <!-- 5. ADD STUDENT PAGE -->
-        <section id="addStudentPage" class="view-section hidden fade-in max-w-3xl mx-auto mt-6">
-            <div class="glass-card p-10 rounded-2xl shadow-2xl">
+        <section id="addStudentPage" class="view-section hidden fade-in max-w-4xl mx-auto mt-6">
+            <div class="glass-card p-10 rounded-2xl shadow-2xl border-cyan-500/10">
                 <div class="flex justify-between items-center mb-10 border-b border-white/10 pb-6">
-                    <h2 class="text-2xl font-bold text-white font-[Orbitron]">Initialize Subject</h2>
+                    <h2 class="text-2xl font-bold text-white font-[Orbitron] tracking-tight">Initialize Data Node</h2>
                     <button onclick="app.navigateTo('adminDashboard')"
-                        class="text-slate-400 hover:text-rose-400 transition flex items-center gap-2"><i
-                            class="fas fa-times"></i> Cancel</button>
+                        class="text-slate-400 hover:text-rose-400 transition flex items-center gap-2 text-xs font-bold uppercase tracking-widest">
+                        <i class="fas fa-times"></i> Abort
+                    </button>
                 </div>
                 <form id="addStudentForm" class="space-y-8">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div>
-                            <label class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Access
+                            <label
+                                class="block text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-400/70 mb-2">Access
                                 Identity Name</label>
                             <input type="text" id="addName"
-                                class="w-full bg-slate-900 border-slate-700 rounded-xl p-4 text-white focus:ring-cyan-500 focus:border-cyan-500 transition-all"
-                                placeholder="Student Full Name" required>
+                                class="w-full bg-slate-900/50 border-slate-700/50 rounded-xl p-4 text-white focus:ring-cyan-500 focus:border-cyan-500 transition-all font-bold"
+                                placeholder="Full legal name" required>
                         </div>
                         <div>
-                            <label class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">System
+                            <label
+                                class="block text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-400/70 mb-2">System
                                 Register Serial</label>
                             <input type="text" id="addRegNo"
-                                class="w-full bg-slate-900 border-slate-700 rounded-xl p-4 text-white focus:ring-cyan-500 focus:border-cyan-500 transition-all font-mono"
-                                placeholder="REG-123456" required>
+                                class="w-full bg-slate-900/50 border-slate-700/50 rounded-xl p-4 text-white focus:ring-cyan-500 focus:border-cyan-500 transition-all font-mono font-bold"
+                                placeholder="XY-00000" required>
                         </div>
                     </div>
 
                     <div class="border-t border-white/10 pt-8">
                         <div class="flex justify-between items-center mb-6">
-                            <label class="block text-sm font-bold text-slate-300 tracking-widest uppercase">Data Nodes
-                                (Subjects)</label>
+                            <label class="block text-xs font-bold text-slate-300 tracking-[0.2em] uppercase">Matrix
+                                Configuration</label>
                             <button type="button" onclick="app.addSubjectRow('addSubjectsContainer')"
-                                class="text-xs bg-cyan-500/10 text-cyan-400 px-4 py-2 rounded-xl hover:bg-cyan-500/20 border border-cyan-500/30 transition-all font-bold">
-                                <i class="fas fa-plus-circle mr-2"></i> Inject Node
+                                class="text-[10px] bg-cyan-500/10 text-cyan-400 px-4 py-2 rounded-lg hover:bg-cyan-500/20 border border-cyan-500/30 transition-all font-bold uppercase tracking-widest">
+                                <i class="fas fa-plus-circle mr-2"></i> Inject Attribute
                             </button>
                         </div>
-                        <div id="addSubjectsContainer" class="space-y-4 max-h-80 overflow-y-auto pr-3 custom-scrollbar">
+                        <div id="addSubjectsContainer"
+                            class="space-y-4 max-h-[400px] overflow-y-auto pr-3 custom-scrollbar">
                             <!-- Dynamic Subject Rows -->
                         </div>
                     </div>
 
                     <div class="flex justify-end gap-4 mt-8 pt-6 border-t border-white/10">
-                        <button type="submit"
-                            class="bg-cyan-600 hover:bg-cyan-500 text-white px-10 py-4 rounded-xl shadow-[0_0_20px_rgba(8,145,178,0.3)] transition-all font-bold uppercase tracking-widest text-xs">
-                            Commit Registry
+                        <button type="submit" class="btn-sci-fi">
+                            Sync to Matrix
                         </button>
                     </div>
                 </form>
@@ -1036,29 +1111,31 @@
 
         <!-- 9. STUDENT LOGIN PAGE -->
         <section id="studentLogin" class="view-section hidden fade-in max-w-md mx-auto w-full mt-24">
-            <div class="glass-card p-10 rounded-3xl shadow-2xl">
-                <h2 class="text-3xl font-bold mb-8 text-center text-white font-[Orbitron]">Student Portal</h2>
+            <div class="glass-card p-10 rounded-3xl shadow-2xl border-cyan-500/20">
+                <h2 class="text-3xl font-bold mb-8 text-center text-white font-[Orbitron]">Student Access</h2>
                 <form id="studentLoginForm" class="space-y-6">
                     <div>
-                        <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">Entry
-                            Name</label>
+                        <label class="block text-xs font-bold text-cyan-400/80 mb-3 uppercase tracking-widest">Full
+                            Legal Name</label>
                         <input type="text" id="studentLoginName"
-                            class="w-full bg-slate-900/50 border-slate-700 rounded-xl p-4 text-white focus:ring-cyan-500 focus:border-cyan-500 transition-all"
-                            placeholder="Your Legal Name" required>
+                            class="w-full bg-slate-900/50 border-slate-700/50 rounded-xl shadow-sm focus:ring-cyan-500 focus:border-cyan-500 p-4 border text-white transition-all font-bold"
+                            placeholder="e.g. JOHN DOE" required>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">Matrix
-                            Identifier (Reg No)</label>
+                        <label class="block text-xs font-bold text-cyan-400/80 mb-3 uppercase tracking-widest">Register
+                            ID</label>
                         <input type="text" id="studentLoginRegNo"
-                            class="w-full bg-slate-900/50 border-slate-700 rounded-xl p-4 text-white focus:ring-cyan-500 focus:border-cyan-500 transition-all font-mono"
-                            placeholder="SYSTEM-0000" required>
+                            class="w-full bg-slate-900/50 border-slate-700/50 rounded-xl shadow-sm focus:ring-cyan-500 focus:border-cyan-500 p-4 border text-white transition-all font-bold font-mono"
+                            placeholder="e.g. 21CS001" required>
                     </div>
-                    <div class="flex justify-between items-center pt-6">
-                        <button type="button" class="text-slate-400 hover:text-white text-sm font-medium transition"
-                            onclick="app.navigateTo('homePage')">Main Menu</button>
-                        <button type="submit"
-                            class="bg-indigo-600 hover:bg-indigo-500 text-white px-10 py-4 rounded-xl shadow-[0_0_20px_rgba(79,70,229,0.3)] transition-all font-bold uppercase tracking-widest text-xs">
-                            Sync Identity
+                    <div class="flex justify-between items-center pt-8">
+                        <button type="button"
+                            class="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest transition"
+                            onclick="app.navigateTo('homePage')">
+                            <i class="fas fa-chevron-left mr-2"></i> Back
+                        </button>
+                        <button type="submit" class="btn-sci-fi">
+                            Login Portal
                         </button>
                     </div>
                 </form>
@@ -1080,34 +1157,40 @@
                 </div>
             </div>
             <div class="grid grid-cols-2 md:grid-cols-3 gap-8">
-                <button onclick="app.viewMarksheet('semester_1')" class="sem-btn p-8 rounded-2xl text-left">
-                    <span class="sem-number text-3xl font-bold text-cyan-400 block mb-1">01</span>
-                    <span class="sem-label text-slate-400 text-xs uppercase tracking-[0.2em] font-medium">Data
+                <button onclick="app.viewMarksheet('semester_1')"
+                    class="sem-btn p-8 rounded-2xl text-left border-white/5 bg-white/5 hover:border-cyan-400/50 transition-all">
+                    <span class="sem-number text-3xl font-bold text-cyan-400 block mb-1 font-[Orbitron]">01</span>
+                    <span class="sem-label text-slate-500 text-[10px] uppercase tracking-[0.2em] font-bold">Data
                         Semester</span>
                 </button>
-                <button onclick="app.viewMarksheet('semester_2')" class="sem-btn p-8 rounded-2xl text-left">
-                    <span class="sem-number text-3xl font-bold text-emerald-400 block mb-1">02</span>
-                    <span class="sem-label text-slate-400 text-xs uppercase tracking-[0.2em] font-medium">Data
+                <button onclick="app.viewMarksheet('semester_2')"
+                    class="sem-btn p-8 rounded-2xl text-left border-white/5 bg-white/5 hover:border-emerald-400/50 transition-all">
+                    <span class="sem-number text-3xl font-bold text-emerald-400 block mb-1 font-[Orbitron]">02</span>
+                    <span class="sem-label text-slate-500 text-[10px] uppercase tracking-[0.2em] font-bold">Data
                         Semester</span>
                 </button>
-                <button onclick="app.viewMarksheet('semester_3')" class="sem-btn p-8 rounded-2xl text-left">
-                    <span class="sem-number text-3xl font-bold text-amber-400 block mb-1">03</span>
-                    <span class="sem-label text-slate-400 text-xs uppercase tracking-[0.2em] font-medium">Data
+                <button onclick="app.viewMarksheet('semester_3')"
+                    class="sem-btn p-8 rounded-2xl text-left border-white/5 bg-white/5 hover:border-amber-400/50 transition-all">
+                    <span class="sem-number text-3xl font-bold text-amber-400 block mb-1 font-[Orbitron]">03</span>
+                    <span class="sem-label text-slate-500 text-[10px] uppercase tracking-[0.2em] font-bold">Data
                         Semester</span>
                 </button>
-                <button onclick="app.viewMarksheet('semester_4')" class="sem-btn p-8 rounded-2xl text-left">
-                    <span class="sem-number text-3xl font-bold text-rose-400 block mb-1">04</span>
-                    <span class="sem-label text-slate-400 text-xs uppercase tracking-[0.2em] font-medium">Data
+                <button onclick="app.viewMarksheet('semester_4')"
+                    class="sem-btn p-8 rounded-2xl text-left border-white/5 bg-white/5 hover:border-rose-400/50 transition-all">
+                    <span class="sem-number text-3xl font-bold text-rose-400 block mb-1 font-[Orbitron]">04</span>
+                    <span class="sem-label text-slate-500 text-[10px] uppercase tracking-[0.2em] font-bold">Data
                         Semester</span>
                 </button>
-                <button onclick="app.viewMarksheet('semester_5')" class="sem-btn p-8 rounded-2xl text-left">
-                    <span class="sem-number text-3xl font-bold text-purple-400 block mb-1">05</span>
-                    <span class="sem-label text-slate-400 text-xs uppercase tracking-[0.2em] font-medium">Data
+                <button onclick="app.viewMarksheet('semester_5')"
+                    class="sem-btn p-8 rounded-2xl text-left border-white/5 bg-white/5 hover:border-purple-400/50 transition-all">
+                    <span class="sem-number text-3xl font-bold text-purple-400 block mb-1 font-[Orbitron]">05</span>
+                    <span class="sem-label text-slate-500 text-[10px] uppercase tracking-[0.2em] font-bold">Data
                         Semester</span>
                 </button>
-                <button onclick="app.viewMarksheet('semester_6')" class="sem-btn p-8 rounded-2xl text-left">
-                    <span class="sem-number text-3xl font-bold text-pink-400 block mb-1">06</span>
-                    <span class="sem-label text-slate-400 text-xs uppercase tracking-[0.2em] font-medium">Data
+                <button onclick="app.viewMarksheet('semester_6')"
+                    class="sem-btn p-8 rounded-2xl text-left border-white/5 bg-white/5 hover:border-pink-400/50 transition-all">
+                    <span class="sem-number text-3xl font-bold text-pink-400 block mb-1 font-[Orbitron]">06</span>
+                    <span class="sem-label text-slate-500 text-[10px] uppercase tracking-[0.2em] font-bold">Data
                         Semester</span>
                 </button>
             </div>
@@ -1289,8 +1372,8 @@
 
             <div class="mt-8 text-center print:hidden mb-10">
                 <button onclick="window.print()"
-                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded shadow-lg transition font-medium">
-                    <i class="fas fa-print mr-2"></i> Print Marksheet
+                    class="btn-sci-fi !px-10 !py-4 !bg-indigo-600/20 !border-indigo-500/50 hover:!bg-indigo-600 hover:!text-black">
+                    <i class="fas fa-print mr-2"></i> Print Reality Sheet
                 </button>
             </div>
         </section>

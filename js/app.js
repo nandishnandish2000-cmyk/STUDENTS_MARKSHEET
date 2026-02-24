@@ -70,24 +70,28 @@ const app = {
     showToast: (message, type = 'info') => {
         const toast = document.getElementById('toast');
         toast.textContent = message;
-        toast.className = `fixed top-20 right-5 px-6 py-4 rounded shadow-lg text-white z-50 transition opacity-0 transform translate-y-[-10px]`;
+        toast.className = `fixed top-24 right-5 px-8 py-4 rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.5)] text-white z-[1000] border backdrop-blur-xl transition-all duration-500 opacity-0 transform translate-y-[-20px] font-bold text-xs uppercase tracking-widest`;
 
-        if (type === 'success') toast.classList.add('bg-green-500');
-        else if (type === 'error') toast.classList.add('bg-red-500');
-        else toast.classList.add('bg-blue-500');
+        if (type === 'success') {
+            toast.classList.add('bg-emerald-500/20', 'border-emerald-500/40', 'text-emerald-400');
+        } else if (type === 'error') {
+            toast.classList.add('bg-rose-500/20', 'border-rose-500/40', 'text-rose-400');
+        } else {
+            toast.classList.add('bg-cyan-500/20', 'border-cyan-500/40', 'text-cyan-400');
+        }
 
         toast.classList.remove('hidden');
         // Trigger animation
         setTimeout(() => {
-            toast.classList.remove('opacity-0', 'translate-y-[-10px]');
+            toast.classList.remove('opacity-0', 'translate-y-[-20px]');
             toast.classList.add('opacity-100', 'translate-y-0');
         }, 10);
 
         setTimeout(() => {
             toast.classList.remove('opacity-100', 'translate-y-0');
-            toast.classList.add('opacity-0', 'translate-y-[-10px]');
-            setTimeout(() => toast.classList.add('hidden'), 300);
-        }, 3000);
+            toast.classList.add('opacity-0', 'translate-y-[-20px]');
+            setTimeout(() => toast.classList.add('hidden'), 500);
+        }, 4000);
     },
 
     // --- Admin Functions ---

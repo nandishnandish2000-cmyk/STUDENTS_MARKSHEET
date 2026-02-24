@@ -312,6 +312,29 @@ async function extractWithGPT(filePath, isPdf = false) {
 app.use(cors());
 app.use(morgan('dev'));
 app.use(bodyParser.json());
+
+// Explicitly serve index.html for the root route
+app.get('/', (req, res) => {
+    const indexPath = path.join(__dirname, '../index.html');
+    const indexPathAlt = path.join(__dirname, 'index.html'); // just in case it's run from root
+
+    if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+    } else if (fs.existsSync(indexPathAlt)) {
+        res.sendFile(indexPathAlt);
+    } else {
+        res.status(404).send(`SYSTEM ERROR: index.html not found. Checked: ${indexPath} and ${indexPathAlt}. Please ensure index.html is in the project root.`);
+    }
+});
+
+app.get('/debug-paths', (req, res) => {
+    res.json({
+        dirname: __dirname,
+        rootFiles: fs.readdirSync(path.join(__dirname, '..')),
+        serverFiles: fs.readdirSync(__dirname)
+    });
+});
+
 app.use(express.static(path.join(__dirname, '..')));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
