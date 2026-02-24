@@ -1243,73 +1243,71 @@
             </div>
         </section>
 
-                <!-- 11. OVERALL CONCLUSION VIEW -->
+                        <!-- 11. OVERALL CONCLUSION VIEW (REBUILT FOR PROFESSIONAL HUD) -->
         <section id="overallConclusion" class="view-section hidden fade-in max-w-7xl mx-auto mt-6 mb-20 px-6">
-            <!-- HUD HEADER -->
-            <div class="flex flex-col md:flex-row justify-between items-end mb-12 border-b border-white/10 pb-8 gap-6">
-                <div>
+            <!-- HEADER BAR -->
+            <div class="flex flex-col md:flex-row justify-between items-center mb-10 border-b border-white/10 pb-8 gap-6">
+                <div class="flex items-center gap-6">
                     <button onclick="app.navigateTo('studentSemesterSelect')"
-                        class="btn-sci-fi !px-6 !py-2 !text-[10px] !border-cyan-500/30 !text-cyan-400 hover:!bg-cyan-500/10 transition-all mb-4">
-                        <i class="fas fa-chevron-left mr-2"></i> SYSTEM NAVIGATION
+                        class="btn-sci-fi !px-4 !py-2 !text-[9px] !border-cyan-500/30 !text-cyan-400 hover:!bg-cyan-500/10 transition-all">
+                        <i class="fas fa-chevron-left mr-2"></i> RETURN CLUSTER
                     </button>
-                    <h2 class="text-5xl font-bold text-white font-[Orbitron] tracking-tighter leading-none">COGNITIVE SUMMARY</h2>
+                    <div>
+                        <h2 class="text-4xl font-bold text-white font-[Orbitron] tracking-tighter leading-none">COGNITIVE SUMMARY</h2>
+                        <p class="text-[9px] text-slate-500 uppercase tracking-[0.5em] mt-2">Verified Academic Identification Matrix</p>
+                    </div>
                 </div>
-                <div class="md:text-right">
-                    <p class="text-[10px] text-slate-500 uppercase tracking-[0.5em] mb-1">Status: Verified</p>
-                    <p class="text-[12px] text-cyan-400 uppercase tracking-[0.3em] font-bold">Cross-Semester Analytic Matrix V4.0</p>
+                <div class="hidden md:block h-12 w-px bg-white/10 mx-6"></div>
+                <div class="text-center md:text-right">
+                    <div id="overallFinalStatus" class="inline-block px-4 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold uppercase tracking-widest mb-2">STATUS: OPTIMIZED</div>
+                    <p class="text-[12px] text-cyan-400 uppercase tracking-[0.3em] font-bold">Protocol V4.0.2</p>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-                <!-- LEFT PANEL: METRICS & AI REPORT -->
-                <div class="lg:col-span-4 space-y-8 sticky top-6">
-                    <!-- ANALYSIS GRID -->
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="glass-card p-6 rounded-xl border-cyan-500/20 relative overflow-hidden group bg-slate-900/40 backdrop-blur-md">
-                            <span class="text-[9px] text-slate-500 uppercase font-black tracking-widest block mb-2">Efficiency</span>
-                            <span id="overallCorePercent" class="text-3xl font-bold text-white font-[Orbitron] drop-shadow-[0_0_10px_rgba(34,211,238,0.3)]">--%</span>
-                            <div class="absolute -right-2 -bottom-2 text-cyan-500/5 text-4xl font-black font-[Orbitron]">CORE</div>
-                        </div>
-                        <div class="glass-card p-6 rounded-xl border-emerald-500/20 relative overflow-hidden group bg-slate-900/40 backdrop-blur-md">
-                            <span class="text-[9px] text-slate-500 uppercase font-black tracking-widest block mb-2">Practical</span>
-                            <span id="overallPracticalIndex" class="text-3xl font-bold text-emerald-400 font-[Orbitron]">--%</span>
-                            <div class="absolute -right-2 -bottom-2 text-emerald-500/5 text-4xl font-black font-[Orbitron]">SKILL</div>
-                        </div>
-                        <div class="glass-card p-6 rounded-xl border-indigo-500/20 relative overflow-hidden group bg-slate-900/40 backdrop-blur-md">
-                            <span class="text-[9px] text-slate-500 uppercase font-black tracking-widest block mb-2">Trajectory</span>
-                            <span id="overallTrendVector" class="text-xl font-bold text-indigo-400 font-[Orbitron] uppercase leading-tight mt-1 truncate">Stable</span>
-                            <div class="absolute -right-2 -bottom-2 text-indigo-500/5 text-4xl font-black font-[Orbitron]">VELO</div>
-                        </div>
-                        <div class="glass-card p-6 rounded-xl border-amber-500/20 relative overflow-hidden group bg-slate-900/40 backdrop-blur-md">
-                            <span class="text-[9px] text-slate-500 uppercase font-black tracking-widest block mb-2">Rank</span>
-                            <span id="overallMatrixRank" class="text-3xl font-bold text-amber-400 font-[Orbitron] drop-shadow-[0_0_10px_rgba(251,191,36,0.3)]">--</span>
-                            <div class="absolute -right-2 -bottom-2 text-amber-500/5 text-4xl font-black font-[Orbitron]">TIER</div>
+            <!-- STATS RIBBON (Horizontal) -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+                <div class="glass-card p-5 rounded-xl border-cyan-500/20 bg-slate-900/30 text-center relative overflow-hidden group">
+                    <span class="text-[9px] text-slate-500 uppercase font-black tracking-widest block mb-2">Core Efficiency</span>
+                    <span id="overallCorePercent" class="text-3xl font-bold text-white font-[Orbitron] drop-shadow-[0_0_8px_rgba(34,211,238,0.4)]">--%</span>
+                </div>
+                <div class="glass-card p-5 rounded-xl border-emerald-500/20 bg-slate-900/30 text-center relative overflow-hidden group">
+                    <span class="text-[9px] text-slate-500 uppercase font-black tracking-widest block mb-2">Skill Index</span>
+                    <span id="overallPracticalIndex" class="text-3xl font-bold text-emerald-400 font-[Orbitron]">--%</span>
+                </div>
+                <div class="glass-card p-5 rounded-xl border-indigo-500/20 bg-slate-900/30 text-center relative overflow-hidden group">
+                    <span class="text-[9px] text-slate-500 uppercase font-black tracking-widest block mb-2">Trend Vector</span>
+                    <span id="overallTrendVector" class="text-xl font-bold text-indigo-400 font-[Orbitron] uppercase mt-1 truncate block">Analyzing...</span>
+                </div>
+                <div class="glass-card p-5 rounded-xl border-amber-500/20 bg-slate-900/30 text-center relative overflow-hidden group">
+                    <span class="text-[9px] text-slate-500 uppercase font-black tracking-widest block mb-2">Matrix Rank</span>
+                    <span id="overallMatrixRank" class="text-3xl font-bold text-amber-400 font-[Orbitron]">--</span>
+                </div>
+            </div>
+
+            <div class="flex flex-col lg:flex-row gap-10">
+                <!-- LEFT SIDE: AI REPORT -->
+                <div class="lg:w-1/3 xl:w-1/4 space-y-6">
+                    <div class="glass-card p-8 rounded-2xl border-cyan-500/20 bg-gradient-to-b from-slate-900/40 to-slate-950/60 backdrop-blur-xl relative shadow-2xl overflow-hidden">
+                        <div class="absolute -right-8 -top-8 text-cyan-400/5 text-8xl"><i class="fas fa-brain"></i></div>
+                        <h3 class="text-md font-bold text-white mb-6 flex items-center gap-3 font-[Orbitron]">
+                            <span class="w-1.5 h-1.5 bg-cyan-400 rounded-full"></span> NEURAL REPORT
+                        </h3>
+                        <div id="careerInsights" class="text-slate-300 leading-relaxed text-sm space-y-4">
+                            <!-- Populated by JS -->
                         </div>
                     </div>
-
-                    <!-- AI REPORT CARD -->
-                    <div class="glass-card p-8 rounded-2xl border-cyan-500/20 bg-gradient-to-br from-slate-900/60 to-slate-950/80 backdrop-blur-xl relative overflow-hidden shadow-2xl">
-                        <div class="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
-                            <i class="fas fa-brain text-6xl text-cyan-400"></i>
-                        </div>
-                        <h3 class="text-lg font-bold text-white mb-6 flex items-center gap-3 font-[Orbitron]">
-                            <span class="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></span> NEURAL DIAGNOSIS
-                        </h3>
-                        <div id="careerInsights" class="text-slate-300 leading-relaxed text-sm">
-                            <div class="flex items-center gap-3 py-4">
-                                <i class="fas fa-circle-notch fa-spin text-cyan-400"></i>
-                                <span class="text-[10px] text-slate-500 uppercase tracking-widest">Compiling academic performance vectors...</span>
-                            </div>
-                        </div>
-                        <div class="mt-8 pt-6 border-t border-white/5">
-                            <span id="overallFinalStatus" class="text-[10px] font-bold uppercase tracking-widest py-1 px-3 bg-white/5 rounded-full text-slate-500">System Standby</span>
-                        </div>
+                    
+                    <!-- Tech Specs -->
+                    <div class="glass-card p-6 rounded-2xl border-white/5 bg-slate-900/20 text-[10px] text-slate-500 tracking-wider">
+                        <p class="flex justify-between mb-2"><span>SOURCE:</span> <span class="text-slate-300">ADMIN_MATRIX</span></p>
+                        <p class="flex justify-between mb-2"><span>LEVEL:</span> <span class="text-slate-300">CROSS_SEM</span></p>
+                        <p class="flex justify-between"><span>TIMESTAMP:</span> <span class="text-slate-300">2026-02-24</span></p>
                     </div>
                 </div>
 
-                <!-- RIGHT PANEL: CONTENT -->
-                <div class="lg:col-span-8 space-y-8" id="semesterTimelineContainer">
-                    <!-- Dynamic semesters populated here -->
+                <!-- RIGHT SIDE: SEMESTER LOGS -->
+                <div class="lg:w-2/3 xl:w-3/4 space-y-12" id="semesterTimelineContainer">
+                    <!-- Dynamic semesters -->
                 </div>
             </div>
         </section>
@@ -1435,7 +1433,7 @@
     </script>
 
     <!-- Original App Script -->
-    <script src="js/app.js?v=22"></script>
+    <script src="js/app.js?v=328"></script>
 
 </body>
 

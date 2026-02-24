@@ -643,7 +643,7 @@ const app = {
         }
     },
 
-            viewOverallConclusion: async () => {
+                viewOverallConclusion: async () => {
         try {
             const res = await fetch(`${API_BASE}/student/overall/${app.currentStudentRegNo}`);
             const data = await res.json();
@@ -655,32 +655,35 @@ const app = {
             if (timelineContainer) timelineContainer.innerHTML = '';
             const semesterAverages = [];
 
-            // Sort history by semester naturally
             data.history.sort((a, b) => a.semester.localeCompare(b.semester, undefined, { numeric: true }));
 
             data.history.forEach(sem => {
                 let semObt = 0, semMax = 0;
                 const semWrapper = document.createElement('div');
-                semWrapper.className = 'glass-card p-8 rounded-2xl border-white/5 mb-8 shadow-2xl relative overflow-hidden group bg-slate-900/40 backdrop-blur-md';
+                semWrapper.className = 'glass-card p-10 rounded-2xl border-white/5 mb-2 relative overflow-hidden group bg-slate-900/40 backdrop-blur-md transition-all duration-500 hover:bg-slate-900/60';
 
                 let semHtml = `
-                    <div class="absolute -right-6 -top-6 text-white/5 text-8xl font-black font-[Orbitron] rotate-12 group-hover:rotate-0 transition-all duration-700 pointer-events-none">${sem.semester.split('_')[1] || 'S'}</div>
-                    <div class="relative z-10">
-                        <div class="flex justify-between items-center mb-8 border-b border-white/10 pb-5">
-                            <h4 class="text-2xl font-bold text-white font-[Orbitron] tracking-widest uppercase">${sem.semester.replace('_', ' ')}</h4>
-                            <div id="sem-badge-${sem.semester}" class="px-3 py-1 rounded-md bg-cyan-500/10 border border-cyan-500/20 text-[10px] text-cyan-400 font-bold uppercase tracking-widest shadow-[0_0_15px_rgba(6,182,212,0.1)]">Syncing...</div>
+                    <div class="flex justify-between items-end mb-8 border-b border-white/10 pb-5">
+                        <div>
+                            <p class="text-[10px] text-cyan-400 font-bold uppercase tracking-[0.4em] mb-1">Academic Segment</p>
+                            <h4 class="text-3xl font-bold text-white font-[Orbitron] tracking-widest uppercase">${sem.semester.replace('_', ' ')}</h4>
                         </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-sm font-[Rajdhani]">
-                                <thead>
-                                    <tr class="text-left text-slate-500 uppercase text-[10px] tracking-widest">
-                                        <th class="pb-5">Data Vector (Subject)</th>
-                                        <th class="pb-5">Logic Unit</th>
-                                        <th class="pb-5 text-center">Efficiency Score</th>
-                                        <th class="pb-5 text-center">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="text-slate-300 divide-y divide-white/5">
+                        <div id="sem-badge-${sem.semester}" class="text-right">
+                            <p class="text-[9px] text-slate-500 uppercase font-black mb-1 tracking-widest">Efficiency</p>
+                            <div class="text-2xl font-bold text-cyan-400 font-[Orbitron]">--%</div>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="text-left text-slate-500 uppercase text-[9px] tracking-[0.2em] font-bold border-b border-white/5">
+                                    <th class="pb-3 pt-0 bg-transparent font-bold">Subject Record</th>
+                                    <th class="pb-3 pt-0 bg-transparent font-bold">Category</th>
+                                    <th class="pb-3 pt-0 bg-transparent font-bold text-center">Score Portfolio</th>
+                                    <th class="pb-3 pt-0 bg-transparent font-bold text-right">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-white/5">
                 `;
 
                 sem.subjects.forEach(sub => {
@@ -694,17 +697,20 @@ const app = {
                     semObt += total; semMax += max;
 
                     semHtml += `
-                        <tr class="hover:bg-white/5 transition-colors group/row">
-                            <td class="py-4 font-bold text-white tracking-wide group-hover/row:text-cyan-400 transition-colors">${sub.name}</td>
-                            <td class="py-4">
-                                <span class="px-2 py-0.5 rounded text-[9px] border ${sub.paper_type === 'CORE' ? 'border-cyan-500/50 text-cyan-400 bg-cyan-500/10' : 'border-slate-500/40 text-slate-400 bg-slate-500/5'} font-bold uppercase tracking-widest font-mono">${sub.paper_type}</span>
+                        <tr class="group/row transition-all hover:bg-white/[0.02]">
+                            <td class="py-5">
+                                <span class="font-bold text-white tracking-wide block group-hover/row:text-cyan-400 transition-colors uppercase text-[13px] font-[Rajdhani]">${sub.name}</span>
                             </td>
-                            <td class="py-4 text-center font-mono ${total < (max * 0.4) ? 'text-rose-400' : 'text-cyan-500/80'}">${total} <span class="text-slate-600">/</span> ${max}</td>
-                            <td class="py-4 text-center">
-                                <div class="flex items-center justify-center gap-2">
-                                    <span class="w-1.5 h-1.5 rounded-full ${isPass ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]'}"></span>
-                                    <span class="font-black text-[9px] tracking-widest ${isPass ? 'text-emerald-400' : 'text-rose-400'}">${isPass ? 'PASS' : 'FAIL'}</span>
-                                </div>
+                            <td class="py-5">
+                                <span class="px-2 py-0.5 rounded text-[8px] border ${sub.paper_type === 'CORE' ? 'border-cyan-500/50 text-cyan-400 bg-cyan-500/10' : 'border-slate-500/40 text-slate-500'} font-bold uppercase tracking-widest font-mono">${sub.paper_type}</span>
+                            </td>
+                            <td class="py-5 text-center">
+                                <span class="font-mono text-[14px] ${total < (max * 0.4) ? 'text-rose-400' : 'text-slate-300'} font-bold">${total}</span>
+                                <span class="text-slate-700 mx-1">/</span>
+                                <span class="font-mono text-[12px] text-slate-600">${max}</span>
+                            </td>
+                            <td class="py-5 text-right">
+                                <span class="px-3 py-1 rounded inline-flex items-center gap-2 border ${isPass ? 'border-emerald-500/20 text-emerald-400 bg-emerald-500/5' : 'border-rose-500/20 text-rose-400 bg-rose-500/5'} font-black text-[10px] tracking-widest">${isPass ? 'PASS' : 'FAIL'}</span>
                             </td>
                         </tr>
                     `;
@@ -713,13 +719,13 @@ const app = {
                 const semAvg = semMax > 0 ? (semObt / semMax) * 100 : 0;
                 semesterAverages.push(semAvg);
 
-                semHtml += `</tbody></table></div></div>`;
+                semHtml += `</tbody></table></div>`;
                 semWrapper.innerHTML = semHtml;
                 if (timelineContainer) timelineContainer.appendChild(semWrapper);
 
                 setTimeout(() => {
                     const badge = document.getElementById(`sem-badge-${sem.semester}`);
-                    if (badge) badge.textContent = `EFF: ${semAvg.toFixed(1)}%`;
+                    if (badge) badge.querySelector('div').textContent = semAvg.toFixed(1) + '%';
                 }, 100);
             });
 
@@ -735,13 +741,13 @@ const app = {
                 const first = semesterAverages[0], last = semesterAverages[semesterAverages.length - 1];
                 if (last > first + 1.5) { 
                     trendEl.textContent = 'ASCENDING'; 
-                    trendEl.className = 'text-xl font-bold text-emerald-400 font-[Orbitron] uppercase leading-tight mt-1'; 
+                    trendEl.className = 'text-xl font-bold text-emerald-400 font-[Orbitron] uppercase mt-1'; 
                 } else if (last < first - 1.5) { 
                     trendEl.textContent = 'DECLINING'; 
-                    trendEl.className = 'text-xl font-bold text-rose-400 font-[Orbitron] uppercase leading-tight mt-1'; 
+                    trendEl.className = 'text-xl font-bold text-rose-400 font-[Orbitron] uppercase mt-1'; 
                 } else { 
                     trendEl.textContent = 'STABLE'; 
-                    trendEl.className = 'text-xl font-bold text-indigo-400 font-[Orbitron] uppercase leading-tight mt-1'; 
+                    trendEl.className = 'text-xl font-bold text-indigo-400 font-[Orbitron] uppercase mt-1'; 
                 }
             } else if (trendEl) trendEl.textContent = 'STABLE';
 
@@ -752,13 +758,13 @@ const app = {
                 else if (coreEfficiency >= 75) { rank = 'TIER-A'; color = 'text-cyan-400'; }
                 else if (coreEfficiency >= 60) { rank = 'TIER-B'; color = 'text-emerald-400'; }
                 rankEl.textContent = rank;
-                rankEl.className = `text-3xl font-bold ${color} font-[Orbitron] drop-shadow-[0_0_10px_rgba(0,0,0,0.5)]`;
+                rankEl.className = `text-3xl font-bold ${color} font-[Orbitron]`;
             }
 
             const statusEl = document.getElementById('overallFinalStatus');
             if (statusEl) {
-                statusEl.textContent = hasFail ? 'STATUS: INCOMPLETE' : 'STATUS: OPTIMIZED';
-                statusEl.className = `text-[10px] font-bold uppercase tracking-widest py-1 px-3 rounded-full ${hasFail ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`;
+                statusEl.textContent = hasFail ? 'STATUS: NEEDS ATTENTION' : 'STATUS: OPTIMIZED';
+                statusEl.className = `inline-block px-4 py-1.5 rounded-full border text-[10px] font-bold uppercase tracking-widest ${hasFail ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'}`;
             }
 
             app.generateCareerInsights(data.history);
