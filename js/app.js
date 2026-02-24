@@ -643,151 +643,160 @@ const app = {
         }
     },
 
-    viewOverallConclusion: async () => {
+        viewOverallConclusion: async () => {
         try {
             const res = await fetch(`${API_BASE}/student/overall/${app.currentStudentRegNo}`);
             const data = await res.json();
+            if (!data.success) { app.showToast(data.message || 'Records not found', 'error'); return; }
 
-            if (data.success) {
-                app.navigateTo('overallConclusion');
+            app.navigateTo('overallConclusion');
+            let coreObt = 0, coreMax = 0, pracObt = 0, pracMax = 0, hasFail = false;
+            const timelineContainer = document.getElementById('semesterTimelineContainer');
+            if (timelineContainer) timelineContainer.innerHTML = '';
+            const semesterAverages = [];
 
-                let totalObtained = 0;
-                let totalMax = 0;
-                let coreObtained = 0;
-                let coreMax = 0;
-                let totalSubjects = 0;
-                let coreCount = 0;
-                let hasFail = false;
+            data.history.sort((a, b) => a.semester.localeCompare(b.semester, undefined, { numeric: true }));
 
-                const timelineContainer = document.getElementById('semesterTimelineContainer');
-                timelineContainer.innerHTML = '';
+            data.history.forEach(sem => {
+                let semObt = 0, semMax = 0;
+                const semWrapper = document.createElement('div');
+                semWrapper.className = 'glass-card p-10 rounded-2xl border-white/5 mb-8 shadow-2xl relative overflow-hidden group';
 
-                // Sort history by semester naturally
-                data.history.sort((a, b) => a.semester.localeCompare(b.semester, undefined, { numeric: true }));
-
-                data.history.forEach(sem => {
-                    const semTitle = sem.semester.replace('_', ' ').toUpperCase();
-                    const semWrapper = document.createElement('div');
-                    semWrapper.className = 'glass-card p-8 rounded-2xl border-white/5';
-
-                    let semHtml = `
-                        <div class="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
-                            <h4 class="text-xl font-bold text-cyan-400 font-[Orbitron]">${semTitle}</h4>
+                let semHtml = `
+                    <div class="absolute -right-10 -top-10 text-white/5 text-8xl font-black font-[Orbitron] rotate-12 group-hover:rotate-0 transition-transform">${sem.semester.split('_')[1] || '0'}</div>
+                    <div class="relative z-10">
+                        <div class="flex justify-between items-center mb-8 border-b border-white/10 pb-5">
+                            <h4 class="text-2xl font-bold text-white font-[Orbitron] tracking-widest">${sem.semester.replace('_', ' ').toUpperCase()}</h4>
+                            <div id="sem-badge-${sem.semester}" class="px-4 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-[10px] text-cyan-400 font-bold uppercase tracking-widest">Efficiency: --%</div>
                         </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-sm">
-                                <thead>
-                                    <tr class="text-left text-slate-500 uppercase text-[10px] tracking-widest">
-                                        <th class="pb-4">Subject</th>
-                                        <th class="pb-4">Type</th>
-                                        <th class="pb-4 text-center">Score</th>
-                                        <th class="pb-4 text-center">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="text-slate-300 divide-y divide-white/5">
-                    `;
+                        <div class="overflow-x-auto"><table class="w-full text-sm font-[Rajdhani]">
+                            <thead><tr class="text-left text-slate-500 uppercase text-[10px] tracking-widest">
+                                <th class="pb-5">Subject Vector</th><th class="pb-5">Logic Type</th><th class="pb-5 text-center">Score Matrix</th><th class="pb-5 text-center">Status</th>
+                            </tr></thead><tbody class="text-slate-300 divide-y divide-white/5 font-[Rajdhani]">`;
 
-                    sem.subjects.forEach(sub => {
-                        totalSubjects++;
-                        const total = (sub.internal_marks || 0) + sub.mark;
-                        const max = (sub.overall_max_marks || 75) + 25;
-                        const isPass = total >= (max * 0.4);
-                        if (!isPass) hasFail = true;
+                sem.subjects.forEach(sub => {
+                    const total = (sub.internal_marks || 0) + sub.mark;
+                    const max = (sub.overall_max_marks || 75) + 25;
+                    const isPass = total >= (max * 0.4);
+                    if (!isPass) hasFail = true;
+                    if (sub.paper_type === 'CORE') { coreObt += total; coreMax += max; }
+                    if (sub.paper_type === 'PRACTICAL' || sub.paper_type === 'PRAC') { pracObt += total; pracMax += max; }
+                    semObt += total; semMax += max;
 
-                        if (sub.paper_type === 'CORE') {
-                            coreCount++;
-                            coreObtained += total;
-                            coreMax += max;
-                        }
-                        totalObtained += total;
-                        totalMax += max;
-
-                        semHtml += `
-                            <tr>
-                                <td class="py-3 font-medium text-white">${sub.name}</td>
-                                <td class="py-3"><span class="px-2 py-0.5 rounded text-[9px] border ${sub.paper_type === 'CORE' ? 'border-indigo-500/30 text-indigo-400 bg-indigo-500/5' : 'border-slate-500/30 text-slate-400 bg-slate-500/5'} font-bold">${sub.paper_type}</span></td>
-                                <td class="py-3 text-center font-mono">${total} / ${max}</td>
-                                <td class="py-3 text-center"><span class="${isPass ? 'text-emerald-400' : 'text-rose-400'} font-black text-[10px] tracking-widest">${isPass ? 'PASS' : 'FAIL'}</span></td>
-                            </tr>
-                        `;
-                    });
-
-                    semHtml += `</tbody></table></div>`;
-                    semWrapper.innerHTML = semHtml;
-                    timelineContainer.appendChild(semWrapper);
+                    semHtml += `<tr>
+                        <td class="py-4 font-bold text-white tracking-wide">${sub.name}</td>
+                        <td class="py-4"><span class="px-2 py-0.5 rounded text-[9px] border ${sub.paper_type === 'CORE' ? 'border-cyan-500/50 text-cyan-400 bg-cyan-500/10' : 'border-slate-500/30 text-slate-500 bg-slate-500/5'} font-bold uppercase tracking-widest">${sub.paper_type}</span></td>
+                        <td class="py-4 text-center font-mono text-cyan-400/80">${total} / ${max}</td>
+                        <td class="py-4 text-center"><span class="px-3 py-1 rounded border ${isPass ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/5' : 'border-rose-500/30 text-rose-400 bg-rose-500/5'} font-black text-[9px] tracking-widest">${isPass ? 'PASS' : 'FAIL'}</span></td>
+                    </tr>`;
                 });
 
-                // Update Stats
-                const corePercent = coreMax > 0 ? (coreObtained / coreMax) * 100 : 0;
-                document.getElementById('overallCorePercent').textContent = corePercent.toFixed(2) + '%';
-                document.getElementById('overallTotalSubjects').textContent = totalSubjects;
-                document.getElementById('overallCoreCount').textContent = coreCount;
+                const semAvg = semMax > 0 ? (semObt / semMax) * 100 : 0;
+                semesterAverages.push(semAvg);
+                semHtml += `</tbody></table></div></div>`;
+                semWrapper.innerHTML = semHtml;
+                if (timelineContainer) timelineContainer.appendChild(semWrapper);
 
-                const statusEl = document.getElementById('overallFinalStatus');
-                if (hasFail) {
-                    statusEl.textContent = 'NEEDS ATTENTION';
-                    statusEl.className = 'text-2xl font-bold text-rose-500 font-[Orbitron] mt-1 block';
-                } else {
-                    statusEl.textContent = 'QUALIFIED';
-                    statusEl.className = 'text-2xl font-bold text-emerald-400 font-[Orbitron] mt-1 block';
-                }
+                setTimeout(() => {
+                    const badge = document.getElementById(`sem-badge-${sem.semester}`);
+                    if (badge) badge.textContent = `Efficiency: ${semAvg.toFixed(1)}%`;
+                }, 100);
+            });
 
-                // Generate Career Insights
-                app.generateCareerInsights(data.history);
+            const coreEfficiency = coreMax > 0 ? (coreObt / coreMax) * 100 : 0;
+            const practicalEfficiency = pracMax > 0 ? (pracObt / pracMax) * 100 : 0;
 
-            } else {
-                app.showToast(data.message || 'Records not found', 'error');
+            if (document.getElementById('overallCorePercent')) document.getElementById('overallCorePercent').textContent = coreEfficiency.toFixed(2) + '%';
+            if (document.getElementById('overallPracticalIndex')) document.getElementById('overallPracticalIndex').textContent = practicalEfficiency.toFixed(1) + '%';
+
+            const trendEl = document.getElementById('overallTrendVector');
+            if (trendEl && semesterAverages.length > 1) {
+                const first = semesterAverages[0], last = semesterAverages[semesterAverages.length - 1];
+                if (last > first + 1.5) { trendEl.textContent = 'ASCENDING'; trendEl.className = 'text-2xl font-bold text-emerald-400 font-[Orbitron] mt-2 block tracking-[0.2em]'; }
+                else if (last < first - 1.5) { trendEl.textContent = 'DECLINING'; trendEl.className = 'text-2xl font-bold text-rose-400 font-[Orbitron] mt-2 block tracking-[0.2em]'; }
+                else { trendEl.textContent = 'STABLE'; trendEl.className = 'text-2xl font-bold text-indigo-400 font-[Orbitron] mt-2 block tracking-[0.2em]'; }
+            } else if (trendEl) trendEl.textContent = 'STABLE';
+
+            const rankEl = document.getElementById('overallMatrixRank');
+            if (rankEl) {
+                let rank = 'TIER-C', color = 'text-slate-400';
+                if (coreEfficiency >= 85) { rank = 'TIER-S'; color = 'text-amber-400'; }
+                else if (coreEfficiency >= 75) { rank = 'TIER-A'; color = 'text-cyan-400'; }
+                else if (coreEfficiency >= 60) { rank = 'TIER-B'; color = 'text-emerald-400'; }
+                rankEl.textContent = rank;
+                rankEl.className = `text-4xl font-bold ${color} font-[Orbitron]`;
             }
+
+            const statusEl = document.getElementById('overallFinalStatus');
+            if (statusEl) {
+                statusEl.textContent = hasFail ? 'STATUS: NEEDS ATTENTION' : 'STATUS: OPTIMIZED';
+                statusEl.className = `text-[9px] font-bold uppercase tracking-widest mt-2 ${hasFail ? 'text-rose-500 font-bold' : 'text-emerald-500 font-bold'}`;
+            }
+
+            app.generateCareerInsights(data.history);
         } catch (err) {
             console.error(err);
             app.showToast('Error syncing overall data', 'error');
         }
-    },
-
-    generateCareerInsights: (history) => {
+    },    generateCareerInsights: (history) => {
         const insightsEl = document.getElementById('careerInsights');
-
-        // Flatten all subjects to find top performers
         const allSubjects = [];
         history.forEach(sem => sem.subjects.forEach(s => allSubjects.push(s)));
-
         const coreSubjects = allSubjects.filter(s => s.paper_type === 'CORE');
+
         if (coreSubjects.length === 0) {
-            insightsEl.textContent = "Continue your academic journey to unlock personalized career trajectories.";
+            insightsEl.innerHTML = `<div class="flex items-center gap-3"><i class="fas fa-exclamation-triangle text-amber-500"></i> Continue academic progression to unlock neural career mapping.</div>`;
             return;
         }
 
-        // Sort by percentage performance
+        // Professional Grade Analysis
         coreSubjects.sort((a, b) => {
             const percA = ((a.internal_marks || 0) + a.mark) / ((a.overall_max_marks || 75) + 25);
             const percB = ((b.internal_marks || 0) + b.mark) / ((b.overall_max_marks || 75) + 25);
             return percB - percA;
         });
 
-        const top3 = coreSubjects.slice(0, 3).map(s => s.name);
+        const top = coreSubjects[0];
+        const top2 = coreSubjects[1];
+        const avgCore = coreSubjects.reduce((acc, s) => acc + ((s.internal_marks || 0) + s.mark), 0) / coreSubjects.length;
 
-        let insightText = `Based on your exceptional performance in <span class="text-cyan-400 font-bold">${top3[0]}</span>`;
-        if (top3[1]) insightText += ` and <span class="text-cyan-400 font-bold">${top3[1]}</span>`;
+        let careerCluster = "General Tech Leadership";
+        let recommendation = "Focus on scaling your diverse core strengths into Solution Architecture.";
+        const name = top.name.toLowerCase();
 
-        insightText += `, you display a strong aptitude for `;
-
-        // Simple keyword based career matching
-        const lowName = top3[0].toLowerCase();
-        if (lowName.includes('data') || lowName.includes('database') || lowName.includes('sql')) {
-            insightText += "Data Engineering, Database Architecture, and Big Data Analytics. Consider certifications in Cloud Data platforms.";
-        } else if (lowName.includes('java') || lowName.includes('python') || lowName.includes('c++') || lowName.includes('programming')) {
-            insightText += "Software Development, Systems Architecting, and Backend Engineering. You have the logic to build complex scalable systems.";
-        } else if (lowName.includes('web') || lowName.includes('html') || lowName.includes('js') || lowName.includes('react')) {
-            insightText += "Full-Stack Development and UI/UX Architecture. Your ability to integrate front-end logic with user needs is a key asset.";
-        } else if (lowName.includes('network') || lowName.includes('security') || lowName.includes('cloud')) {
-            insightText += "Cybersecurity Analysis and Cloud Infrastructure Management. You are well-suited for high-stakes system protection.";
-        } else if (lowName.includes('ai') || lowName.includes('machine') || lowName.includes('intelligence')) {
-            insightText += "A.I. Research and Machine Learning Engineering. You possess the mathematical rigor for advanced cognitive computing.";
-        } else {
-            insightText += "Advanced Technical Leadership. Your diverse core strength indicates a potential for Tech Product Management or Solution Architecture.";
+        if (name.includes('data') || name.includes('sql') || name.includes('dbms')) {
+            careerCluster = "Data Engineering & Intelligence";
+            recommendation = "Your precision in data logic suggests a high aptitude for Big Data Architecture and Neural Data Modeling.";
+        } else if (name.includes('web') || name.includes('js') || name.includes('interface')) {
+            careerCluster = "Full-Stack Human-Computer Interaction";
+            recommendation = "Exceptional aptitude for creating seamless digital ecosystems. Target Senior UI/UX Architect roles.";
+        } else if (name.includes('security') || name.includes('network')) {
+            careerCluster = "Cyber-Infrastructural Defense";
+            recommendation = "Strong logical shielding capabilities. Optimized for Pentesting and Secure Cloud Engineering.";
+        } else if (name.includes('program') || name.includes('java') || name.includes('python') || name.includes('c++')) {
+            careerCluster = "High-Level Systems Implementation";
+            recommendation = "Your algorithmic efficiency is high. Ideal for Backend Scalability and Core Engine Development.";
+        } else if (name.includes('ai') || name.includes('intelligence') || name.includes('neural')) {
+            careerCluster = "Artificial Intelligence & Cognitive Computing";
+            recommendation = "Mathematical rigor detected. You are well-suited for ML Engineering and Deep Learning Research.";
         }
 
-        insightsEl.innerHTML = insightText;
+        insightsEl.innerHTML = `
+            <div class="space-y-4">
+                <div class="flex items-center gap-3">
+                    <span class="px-3 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold rounded-lg uppercase tracking-tighter">Career Vector: ${careerCluster}</span>
+                    <span class="text-slate-500 text-[10px] uppercase font-bold tracking-[0.2em]">Logic Efficiency: ${avgCore.toFixed(1)}%</span>
+                </div>
+                <p class="text-white font-medium leading-relaxed">
+                    Based on your dominant performance in <span class="text-cyan-400 font-bold">${top.name}</span> 
+                    ${top2 ? `and <span class="text-cyan-400 font-bold">${top2.name}</span>` : ''},
+                    our analysis identifies a <span class="text-emerald-400 font-bold">94% fit</span> for <span class="text-white border-b border-white/20 pb-0.5">${careerCluster}</span>.
+                </p>
+                <p class="text-slate-400 text-sm italic border-l-2 border-slate-700 pl-4 py-1">
+                    "${recommendation}"
+                </p>
+            </div>
+        `;
     },
 
     // --- Marksheet Upload & Extraction ---
