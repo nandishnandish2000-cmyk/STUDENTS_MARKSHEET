@@ -63,7 +63,8 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            z-index: -5;
+            z-index: 1;
+            /* Move behind content but above body */
             background: #000000;
             pointer-events: auto !important;
         }
@@ -80,7 +81,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 2;
+            z-index: 1;
             pointer-events: auto !important;
         }
 
@@ -184,11 +185,18 @@
             display: flex;
             align-items: center;
             gap: 30px;
-            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
             min-width: 380px;
             position: relative;
             overflow: hidden;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        .compact-module.visible {
+            opacity: 1;
+            transform: translateY(0);
         }
 
         .compact-module::before {
@@ -257,6 +265,9 @@
         main,
         footer,
         section {
+            position: relative;
+            z-index: 10;
+            /* Ensure content is above background but still non-blocking */
             pointer-events: none !important;
         }
 
@@ -441,20 +452,20 @@
 
         <!-- 1. HOME PAGE -->
         <section id="homePage"
-            class="view-section fade-in flex flex-col items-center justify-center h-full min-h-[80vh]">
-            <div class="flex flex-col md:flex-row gap-8 w-full max-w-5xl justify-center px-6">
+            class="view-section fade-in flex flex-col items-center justify-end h-full min-h-[85vh] pb-24">
+            <div class="flex flex-col md:flex-row gap-8 w-full max-w-6xl justify-center px-10">
                 <!-- Student Portal -->
                 <div class="compact-module cursor-pointer group" onclick="app.navigateTo('studentLogin')">
                     <div
                         class="w-16 h-16 rounded-2xl bg-cyan-500/10 flex items-center justify-center group-hover:bg-cyan-500/20 transition duration-300 border border-cyan-500/20">
-                        <i class="fas fa-user-graduate text-3xl text-cyan-400 glow-icon"></i>
+                        <i class="fas fa-fingerprint text-3xl text-cyan-400 glow-icon"></i>
                     </div>
                     <div>
                         <h3 class="text-xl font-bold text-white group-hover:text-cyan-400 transition font-[Orbitron]">
                             Student Portal
                         </h3>
-                        <p class="text-xs text-slate-400 tracking-wider font-[Rajdhani] uppercase mt-1">Access Neural
-                            Records</p>
+                        <p class="text-xs text-slate-400 tracking-wider font-[Rajdhani] uppercase mt-1">Biometric
+                            Access</p>
                     </div>
                 </div>
 
@@ -462,13 +473,13 @@
                 <div class="compact-module cursor-pointer group" onclick="app.navigateTo('adminLogin')">
                     <div
                         class="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center group-hover:bg-purple-500/20 transition duration-300 border border-purple-500/20">
-                        <i class="fas fa-terminal text-3xl text-purple-400 glow-icon"></i>
+                        <i class="fas fa-brain text-3xl text-purple-400 glow-icon"></i>
                     </div>
                     <div>
                         <h3 class="text-xl font-bold text-white group-hover:text-purple-400 transition font-[Orbitron]">
                             Command Hub
                         </h3>
-                        <p class="text-xs text-slate-400 tracking-wider font-[Rajdhani] uppercase mt-1">Matrix
+                        <p class="text-xs text-slate-400 tracking-wider font-[Rajdhani] uppercase mt-1">Neural
                             Management</p>
                     </div>
                 </div>
@@ -579,21 +590,25 @@
                     onclick="app.navigateToAddStudent()">
                     <div
                         class="text-5xl text-blue-400 mb-6 group-hover:drop-shadow-[0_0_15px_rgba(96,165,250,0.5)] transition">
-                        <i class="fas fa-plus-circle"></i>
+                        <i class="fas fa-id-badge"></i>
                     </div>
-                    <h3 class="text-xl font-bold text-white uppercase tracking-wider">Deploy Student</h3>
-                    <p class="text-slate-400 text-sm mt-2">Initialize new record in database</p>
+                    <h3 class="text-xl font-bold text-white uppercase tracking-wider font-[Orbitron] text-sm">Deploy
+                        Identity</h3>
+                    <p class="text-slate-400 text-[10px] mt-2 uppercase tracking-widest font-[Rajdhani]">Create Core
+                        Record</p>
                 </div>
 
                 <!-- MODULE 2: NEURAL OCR UPLOAD -->
                 <div class="glass-card p-10 rounded-2xl text-center cursor-pointer hover:scale-105 transition-all group border-purple-500/20 bg-purple-500/5 shadow-[0_0_30px_rgba(168,85,247,0.1)]"
                     onclick="app.navigateTo('uploadMarksheetPage')">
                     <div
-                        class="text-5xl text-purple-400 mb-6 group-hover:drop-shadow-[0_0_15px_rgba(192,132,252,0.5)] transition">
-                        <i class="fas fa-file-upload"></i>
+                        class="text-5xl text-purple-400 mb-6 group-hover:drop-shadow-[0_0_15px_rgba(168,85,247,0.5)] transition">
+                        <i class="fas fa-microscope"></i>
                     </div>
-                    <h3 class="text-xl font-bold text-white uppercase tracking-wider">Upload Marksheet</h3>
-                    <p class="text-slate-400 text-sm mt-2">Extract data from image files</p>
+                    <h3 class="text-xl font-bold text-white uppercase tracking-wider font-[Orbitron] text-sm">Neural OCR
+                        Scan</h3>
+                    <p class="text-slate-400 text-[10px] mt-2 uppercase tracking-widest font-[Rajdhani]">Extract Matrix
+                        Data</p>
                 </div>
 
                 <!-- MODULE 3: DATABASE ACCESS -->
@@ -601,10 +616,12 @@
                     onclick="app.loadStudentList()">
                     <div
                         class="text-5xl text-emerald-400 mb-6 group-hover:drop-shadow-[0_0_15px_rgba(52,211,153,0.5)] transition">
-                        <i class="fas fa-database"></i>
+                        <i class="fas fa-network-wired"></i>
                     </div>
-                    <h3 class="text-xl font-bold text-white uppercase tracking-wider">Access Records</h3>
-                    <p class="text-slate-400 text-sm mt-2">View and manage centralized flux</p>
+                    <h3 class="text-xl font-bold text-white uppercase tracking-wider font-[Orbitron] text-sm">Record
+                        Matrix</h3>
+                    <p class="text-slate-400 text-[10px] mt-2 uppercase tracking-widest font-[Rajdhani]">Access Global
+                        Stream</p>
                 </div>
             </div>
         </section>
@@ -1387,20 +1404,18 @@
         document.addEventListener('DOMContentLoaded', () => {
 
 
-            // Intro Sequence: Reveal UI after delay
+            // Intro Sequence: Reveal UI after robot closeup
             setTimeout(() => {
                 const title = document.getElementById('portal-title');
-                const subtitle = document.getElementById('portal-subtitle');
                 if (title) title.classList.add('visible');
-                if (subtitle) subtitle.classList.add('visible');
 
                 const homeModules = document.querySelectorAll('#homePage .compact-module');
                 homeModules.forEach((mod, index) => {
                     setTimeout(() => {
                         mod.classList.add('visible');
-                    }, 200 + (index * 150));
+                    }, 500 + (index * 400)); // Staggered entry
                 });
-            }, 500); // 500ms faster reveal
+            }, 2800); // 2.8s total delay for robot intro
 
         });
     </script>
